@@ -24,8 +24,11 @@ To run the program, run SimpleKeybindProxy.exe AS AN ADMINISTRATOR - if you do n
 # Usage
 When running from the command line, you can provide the following arguments: 
 > -l - Define a custom Landing Site directory location.  Example: -l "C:\Folder1\LandingSites\"
+
 > -b - Define the directory and / or keybind dictionary file.  Example: -b "C:\Folder1\Binds\" OR -b "C:\Folder1\Binds\bindfile.txt" OR -b "bindfile.txt"
+
 > -a - Define the IP address the server will listen for connections on.  Defaults to "*" or every address.  Example: -a 127.0.0.1
+
 > -p - Define the Port the server will listen for connections on.  Defaults to 8001.  Example: -p 1234 
 
 Once you have your binds defined and have created your landing site (or are using the samples), you can view them at http://localhost:8001 (or the IP and Port you specified with -a / -p).
