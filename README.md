@@ -101,6 +101,7 @@ JS / HTML:
         <link rel="stylesheet" href=".\style.css" type="text/css">
     </head>
     <body>
+        <div OnCLick="IssueBind('MyCustomKeybind')">Press this Button</div>
         <script>
             function IssueBind(bindName) {
                 var form = document.createElement('form');
