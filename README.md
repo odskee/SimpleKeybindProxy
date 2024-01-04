@@ -108,3 +108,380 @@ JS / HTML:
 
 ## Special Notes
 Currently, any favicon.ico requests are ignored by the server and will not be shown even if provided.
+
+#
+# Key Press Names
+The following is a list of accepted KeyPress names - these are the values you add to the binds.txt file against a certain keybind name.  These are taken from InputSimulator which is used to simulate the key press ([http://inputsimulator.codeplex.com/](https://www.nuget.org/packages/InputSimulator/1.0.4)).
+```
+        
+        Left mouse button
+        LBUTTON
+
+        
+        Right mouse button
+        RBUTTON
+
+        
+        Control-break processing
+        CANCEL
+
+        
+        Middle mouse button (three-button mouse) - NOT contiguous with LBUTTON and RBUTTON
+        MBUTTON
+
+                
+        BACKSPACE key
+        BACK
+
+        
+        TAB key
+        TAB
+
+        
+        CLEAR key
+        CLEAR
+
+        
+        ENTER key
+        RETURN 
+
+        
+        SHIFT key
+        SHIFT
+
+        
+        CTRL key
+        CONTROL
+
+        
+        ALT key
+        MENU
+
+        
+        PAUSE key
+        PAUSE
+
+        
+        CAPS LOCK key
+        CAPITAL
+
+        
+        ESC key
+        ESCAPE
+
+        
+        SPACEBAR
+        SPACE
+
+        
+        PAGE UP key
+        PRIOR
+
+        
+        PAGE DOWN key
+        NEXT
+
+        
+        END key
+        END
+
+        
+        HOME key
+        HOME
+
+        
+        LEFT ARROW key
+        LEFT
+
+        
+        UP ARROW key
+        UP
+
+        
+        RIGHT ARROW key
+        RIGHT
+
+        
+        DOWN ARROW key
+        DOWN
+
+        
+        SELECT key
+        SELECT
+
+        
+        PRINT key
+        PRINT
+
+        
+        EXECUTE key
+        EXECUTE
+
+        
+        PRINT SCREEN key
+        SNAPSHOT
+
+        
+        INS key
+        INSERT
+
+        
+        DEL key
+        DELETE
+
+        
+        HELP key
+        HELP
+
+        
+        A-Z, 0-9 (Don't Enter Braces) i.e. VK_A for A key.
+        VK_<Key>
+
+        
+        Left Windows key (Microsoft Natural keyboard)
+        LWIN
+
+        
+        Right Windows key (Natural keyboard)
+        RWIN
+
+        
+        Computer Sleep key
+        SLEEP
+
+        
+        Numeric keypad 0 key
+        NUMPAD0
+
+        
+        Numeric keypad 1 key
+        NUMPAD1
+
+        
+        Numeric keypad 2 key
+        NUMPAD2
+
+        
+        Numeric keypad 3 key
+        NUMPAD3
+
+        
+        Numeric keypad 4 key
+        NUMPAD4
+
+        
+        Numeric keypad 5 key
+        NUMPAD5
+
+        
+        Numeric keypad 6 key
+        NUMPAD6
+
+        
+        Numeric keypad 7 key
+        NUMPAD7
+
+        
+        Numeric keypad 8 key
+        NUMPAD8
+
+        
+        Numeric keypad 9 key
+        NUMPAD9
+
+        
+        Multiply key
+        MULTIPLY
+
+        
+        Add key
+        ADD
+
+        
+        Separator key
+        SEPARATOR
+
+        
+        Subtract key
+        SUBTRACT
+
+        
+        Decimal key
+        DECIMAL
+
+        
+        Divide key
+        DIVIDE
+
+
+        F-Keys I.e. F1 for F1 key  Don't type braces.
+        <F> + <1-24>
+
+        
+        NUM LOCK key
+        NUMLOCK
+
+        
+        SCROLL LOCK key
+        SCROLL
+
+        
+        Left SHIFT key
+        LSHIFT
+
+        
+        Right SHIFT key
+        RSHIFT = 0xA1,
+
+        
+        Left CONTROL key
+        LCONTROL
+
+        
+        Right CONTROL key
+        RCONTROL
+
+        
+        Left ALT key
+        LMENU
+
+        
+        Right ALT key
+        RMENU
+
+        
+        Windows 2000/XP: Browser Back key
+        BROWSER_BACK
+
+        
+        Windows 2000/XP: Browser Forward key
+        BROWSER_FORWARD
+
+        
+        Windows 2000/XP: Browser Refresh key
+        BROWSER_REFRESH
+
+        
+        Windows 2000/XP: Browser Stop key
+        BROWSER_STOP
+
+        
+        Windows 2000/XP: Browser Search key
+        BROWSER_SEARCH
+
+        
+        Windows 2000/XP: Browser Favorites key
+        BROWSER_FAVORITES
+
+        
+        Windows 2000/XP: Browser Start and Home key
+        BROWSER_HOME
+
+        
+        Windows 2000/XP: Volume Mute key
+        VOLUME_MUTE
+
+        
+        Windows 2000/XP: Volume Down key
+        VOLUME_DOWN
+
+        
+        Windows 2000/XP: Volume Up key
+        VOLUME_UP
+
+        
+        Windows 2000/XP: Next Track key
+        MEDIA_NEXT_TRACK
+
+        
+        Windows 2000/XP: Previous Track key
+        MEDIA_PREV_TRACK
+
+        
+        Windows 2000/XP: Stop Media key
+        MEDIA_STOP
+
+        
+        Windows 2000/XP: Play/Pause Media key
+        MEDIA_PLAY_PAUSE
+
+        
+        Windows 2000/XP: Start Mail key
+        LAUNCH_MAIL
+
+        
+        Windows 2000/XP: Select Media key
+        LAUNCH_MEDIA_SELECT
+
+        
+        Windows 2000/XP: Start Application 1 key
+        LAUNCH_APP1
+
+        
+        Windows 2000/XP: Start Application 2 key
+        LAUNCH_APP2
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the ';:' key 
+        OEM_1
+
+        
+        Windows 2000/XP: For any country/region, the '+' key
+        OEM_PLUS
+
+        
+        Windows 2000/XP: For any country/region, the ',' key
+        OEM_COMMA
+
+        
+        Windows 2000/XP: For any country/region, the '-' key
+        OEM_MINUS
+
+        
+        Windows 2000/XP: For any country/region, the '.' key
+        OEM_PERIOD
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the '/?' key 
+        OEM_2
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the '`~' key 
+        OEM_3
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the '[{' key
+        OEM_4
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the '\|' key
+        OEM_5
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the ']}' key
+        OEM_6
+
+        
+        Used for miscellaneous characters; it can vary by keyboard. Windows 2000/XP: For the US standard keyboard, the 'single-quote/double-quote' key
+        OEM_7
+
+        
+        Used for miscellaneous characters; it can vary by keyboard.
+        OEM_8
+
+       
+        Windows 2000/XP: Either the angle bracket key or the backslash key on the RT 102-key keyboard
+        OEM_102
+
+        
+        Play key
+        PLAY
+
+        
+        Zoom key
+        ZOOM
+
+        
+        Clear key
+        OEM_CLEAR
+```
