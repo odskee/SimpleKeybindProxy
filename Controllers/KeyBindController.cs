@@ -72,7 +72,7 @@ namespace SimpleKeybindProxy.Controllers
 
             string KeyPressName = "";
             KeyPressName = bindMatch.Value.Value;
-            Console.WriteLine("KeyBind Initiated: {0}", KeyPressName);
+            Console.WriteLine("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
             InputSimulator inputSimulator = new InputSimulator();
             VirtualKeyCode? buttonHeld = null;
 

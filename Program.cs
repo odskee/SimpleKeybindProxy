@@ -15,6 +15,7 @@
 using Controllers.SimpleWebService;
 using SimpleKeybindProxy.Controllers;
 using System.CommandLine;
+using System.Net;
 
 namespace HttpListenerExample
 {
@@ -29,7 +30,7 @@ namespace HttpListenerExample
             string Port = "";
             string ServerAddess = "";
             var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-
+            //static string TerminalURL(string caption, string url) => $"\u001B]8;;{url}\a{caption}\u001B]8;;\a";
 
             // Build Arguments
             var LandSiteOption = new Option<string?>(
@@ -152,7 +153,50 @@ namespace HttpListenerExample
             HttpServer httpServer = new HttpServer(bindController, LandingDir);
             httpServer.Listener.Prefixes.Add(ServerAddess);
             httpServer.Listener.Start();
-            Console.WriteLine("Listening for connections on {0}", ServerAddess);
+
+            if (!await httpServer.RegisterLandingSitesAsync())
+            {
+                return;
+            }
+
+            // Console Output - show all IP's this can be accessed on:
+            if (!ServerAddess.Contains("*"))
+            {
+                Console.WriteLine("SimpleKeybindProxy has successfully started and can be accessed at {0}", ServerAddess);
+            }
+            else
+            {
+                IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+                IPAddress[] addr = ipEntry.AddressList;
+
+                if (addr.Any())
+                {
+                    Console.WriteLine("SimpleKeybindProxy has successfully started and can be accessed at the following addresses:");
+                    Console.WriteLine($"http://localhost:{Port}/");
+                    Console.WriteLine($"http://127.0.0.1:{Port}/");
+                    foreach (IPAddress addrAddr in addr.Where(a => a.ToString().Contains(":") == false))
+                    {
+                        Console.WriteLine($"http://{addrAddr}:{Port}/");
+                    }
+                }
+            }
+            Console.WriteLine($"");
+            Console.WriteLine($"");
+
+
+            // Console Output - Show list of available landing sites:
+            List<string> LandingSites = httpServer.GetListOfLandingSites();
+            if (LandingSites.Count > 0)
+            {
+                Console.WriteLine("The following Landing Sites were detected:");
+                foreach (string site in LandingSites)
+                {
+                    Console.WriteLine($"> {ServerAddess.Replace("*", "localhost")}{site.Split("\\").Last()}/");
+                }
+            }
+
+            Console.WriteLine($"---------------------------------------");
+
 
             // Handle requests
             Task listenTask = httpServer.HandleIncomingConnectionsAsync();

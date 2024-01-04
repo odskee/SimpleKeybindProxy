@@ -12,15 +12,6 @@ D:\Libraries\Documents\Projects\SimpleKeybindProxy\obj\Debug\net8.0\refint\Simpl
 D:\Libraries\Documents\Projects\SimpleKeybindProxy\obj\Debug\net8.0\SimpleKeybindProxy.pdb
 D:\Libraries\Documents\Projects\SimpleKeybindProxy\obj\Debug\net8.0\SimpleKeybindProxy.genruntimeconfig.cache
 D:\Libraries\Documents\Projects\SimpleKeybindProxy\obj\Debug\net8.0\ref\SimpleKeybindProxy.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.AspNetCore.Http.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.AspNetCore.Http.Abstractions.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.AspNetCore.Http.Features.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.AspNetCore.WebUtilities.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.Extensions.ObjectPool.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
-D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\Microsoft.Net.Http.Headers.dll
 D:\Libraries\Documents\Projects\SimpleKeybindProxy\obj\Debug\net8.0\SimpleKeybindProxy.csproj.AssemblyReference.cache
 D:\Libraries\Documents\Projects\SimpleKeybindProxy\obj\Debug\net8.0\SimpleKeybindProxy.csproj.CopyComplete
 D:\Libraries\Documents\Projects\SimpleKeybindProxy\bin\Debug\net8.0\WindowsInput.dll
