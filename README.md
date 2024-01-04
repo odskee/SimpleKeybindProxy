@@ -39,7 +39,9 @@ When running from the command line, you can provide the following arguments:
 -p - Define the Port the server will listen for connections on.  Defaults to 8001.  Example: -p 1234
 ```
 
-Once you have your binds defined and have created your landing site (or are using the samples), you can view them at "http://localhost:8001/<Directory_Structure_of_Landing_Site>" (or the IP and Port you specified with -a / -p); for example, http://localhost:8001/Landing1/.  The URL request structure needs to match your Landing Site directory structure.  For example, if you add "SitesByBob/Panel_1/" into the Landing Site folder, you can view this landing site at http://localhost:8001/SitesByBob/Pane_1/.
+Once you have your binds defined and have created your landing site (or are using the samples), you can view them at _"http://localhost:8001/Directory_Structure_of_Landing_Site"_ (or the IP and Port you specified with -a / -p); for example, _http://localhost:8001/Landing1/_.
+
+The URL request structure needs to match your Landing Site directory structure.  For example, if you add "SitesByBob/Panel_1/" into the Landing Site folder, you can view this landing site at http://localhost:8001/SitesByBob/Pane_1/.
 
 When an interaction on a landing site requests a key press, the keybind name and Key Press will be displayed in the console output.  This can be tested using a "test" keybind name in the request - it does not need to be defined in a bind dictionary.
 
