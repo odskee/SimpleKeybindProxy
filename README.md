@@ -20,7 +20,10 @@ Landing Sites are shown based on the request URl and must have a matching direct
 
 
 # Setup
-Once you have downloaded the release version, you will have a SimpleKeyBindProxy folder - place this folder in a location you're happy with, this is where you will run it from.  By default, the SimpleKeyBindProxy folder contains both a "Binds" directory and a "Landing" directory - these are both required, although you can define an alternative location when starting the program.  There are two sample Landing Sites to give a very, very basic demonstration of their purpose.
+Once you have downloaded the release version:
+> https://github.com/odskee/SimpleKeybindProxy/releases
+
+And extract the zip file, you will have a SimpleKeyBindProxy folder - place this folder in a location you're happy with, this is where you will run it from.  By default, the SimpleKeyBindProxy folder contains both a "Binds" directory and a "Landing" directory - these are both required, although you can define an alternative location when starting the program.  There are two sample Landing Sites to give a very, very basic demonstration of their purpose.
 
 You will also need to configure your binds.txt dictionary - by default this is in "SimpleKeybindProxy/Binds/binds.txt".  There are some pre-defined to act as a demonstration; they are not needed and can be removed / renamed.  The purpose of this file is to define a 'keybind name' and it's matching Key Press.  While the name can be anything you like, the associated Key Press must match exactly - a list of available key presses can be found in the "SimpleKeybindProxy/KeyPressNames.txt" file.  Note: Some experimentation may be required for symbols / certain keys due to language / regional differences.
 
