@@ -60,6 +60,12 @@ When an interaction on a landing site requests a key press, the keybind name and
 
 As shown above, you can make a manual key press by requesting the KeyBind URL directly.  To do this, navigate to http://server_address:server_port/KeyBind_name_of_keybind - you don't need to include a Landing page in your request but if you don't, the server will show you the default error HTML - your keybind has still been processed as shown in the console window.
 
+
+# Setting Your Bind Dictionary
+The bind dictionary is a simple txt file that specifies the name of a keybind, a comma (,) then the 'system' name for the key press - an example can be found at the bottom of this page.  A list of system names can also be found below.  You can combine as many modifiers (Shift, Control and Alt) as you like by using the plus (+) symbol but can only use one key at a time.  For example, LCONTROL+LMENU+LSHIFT+VK_T is fine but LCONTROL+VK_A+VK_T is not!
+
+The names you list here will either be taken from a Landing page you're using or will be specified here for you to use in your own custom landing page.
+
 # Making Custom Landing Sites
 ## Directory Structure
 You can create as many landing sites as you want, providing you use an appropriate directory structure.  Create a new directory in the Landing Site location - this acts as your container.  You can either directly place resources such as HTML here or you can create further subdirectories.  For example, if you want to create multiple panels, you can create a structure that looks like "Landing\BobsPanels\Panel_1" and "Landing\BobsPanels\Panel_2" (These would be accessed by requesting /BobsPanels/Panel_1/ in the URL.
