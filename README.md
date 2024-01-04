@@ -121,6 +121,16 @@ JS / HTML:
 Currently, any favicon.ico requests are ignored by the server and will not be shown even if provided.
 
 #
+
+# Sample binds.txt
+```
+MyCustomName1,LCTRL+F
+AnotherKeybind,LALT_F
+GearDown,G
+GearUp,LSHIFT+G
+Test1,LCONTROL+VK_A
+```
+
 # Key Press Names
 The following is a list of accepted KeyPress names - these are the values you add to the binds.txt file against a certain keybind name.  These are taken from InputSimulator which is used to simulate the key press ([http://inputsimulator.codeplex.com/](https://www.nuget.org/packages/InputSimulator/1.0.4)).
 ```
