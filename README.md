@@ -44,7 +44,7 @@ When running from the command line, you can provide the following arguments:
 ```
 .\SimpleKeybindProxy.exe -l - Define a custom Landing Site directory location.  Example: -l "C:\Folder1\LandingSites\"
 
-.\SimpleKeybindProxy.exe -b - Define the directory and / or keybind dictionary file.  Example: -b "C:\Folder1\Binds\" OR -b "C:\Folder1\Binds\bindfile.txt" OR -b "bindfile.txt"
+.\SimpleKeybindProxy.exe -b - Define the directory that contains keybind dictionary.  Example: -b "C:\Folder1\Binds\"
 
 .\SimpleKeybindProxy.exe -a - Define the IP address the server will listen for connections on.  Defaults to "*" or every address.  Example: -a 127.0.0.1
 
