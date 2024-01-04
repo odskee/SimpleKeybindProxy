@@ -34,21 +34,34 @@ namespace SimpleKeybindProxy.Controllers
             // Load Keybind File
             try
             {
-                if (File.Exists(BindLibraryLocation))
+                if (Directory.Exists(BindLibraryLocation))
                 {
-
-                    string[] _bindlibrary = await File.ReadAllLinesAsync(BindLibraryLocation);
-                    foreach (string bind in _bindlibrary)
+                    IEnumerable<string> bindsToLoad = Directory.EnumerateFiles(BindLibraryLocation);
+                    foreach (string toLoad in bindsToLoad.Where(a => a.Contains(".txt")))
                     {
-                        string[] paring = bind.Split(",");
-                        BindLibrary.Add(new KeyValuePair<string, string>(paring[0].Trim(), paring[1].Trim()));
+                        string[] _bindlibrary = await File.ReadAllLinesAsync(toLoad);
+                        foreach (string bind in _bindlibrary)
+                        {
+                            string[] paring = bind.Split(",");
+                            BindLibrary.Add(new KeyValuePair<string, string>(paring[0].Trim(), paring[1].Trim()));
+                        }
                     }
                 }
                 else
                 {
-                    Console.WriteLine("There was a problem accessing your Bind Library.  Make sure the directory exists and is accessible.");
+                    Console.WriteLine("The provided Binds directory {} could not be loaded", BindLibraryLocation);
                     return false;
                 }
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                Console.WriteLine("The provided Bind directory {0} could not be found", BindLibraryLocation);
+                return false;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine("Insufficient persmissions to access Bind directory {0}", BindLibraryLocation);
+                return false;
             }
             catch (Exception ex)
             {
@@ -56,12 +69,21 @@ namespace SimpleKeybindProxy.Controllers
                 return false;
             }
 
+            Console.WriteLine("Bind Libarary loaded successfully.  {0} total binds found.", BindLibrary.Count);
             return true;
         }
 
         // Processing and issues a keypress based on the bind name / key mapping
         public partial async Task<bool> ProcessKeyBindRequestAsync(string bindRequest)
         {
+            if (BindLibrary.Count == 0)
+            {
+                if (!await LoadKeyBindLibraryAsync())
+                {
+                    return false;
+                }
+            }
+
             string rBind = bindRequest.Split("/").First(a => a.Contains("KeyBind_")).Replace("KeyBind_", "");
             KeyValuePair<string, string>? bindMatch = BindLibrary.FirstOrDefault(a => a.Key.Equals(rBind));
             if (bindMatch.Value.Key == null || bindMatch.Value.Value == null)
@@ -73,8 +95,14 @@ namespace SimpleKeybindProxy.Controllers
             string KeyPressName = "";
             KeyPressName = bindMatch.Value.Value;
             Console.WriteLine("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
+
+            // Prep inputSimulator
             InputSimulator inputSimulator = new InputSimulator();
-            VirtualKeyCode? buttonHeld = null;
+            List<VirtualKeyCode> buttonHeld = new List<VirtualKeyCode>();
+            VirtualKeyCode? buttonPress = null;
+            VirtualKeyCode[] ListOfKeyPresses = Enum.GetValues<VirtualKeyCode>();
+
+            string[] ModifierKeys = { "LSHIFT", "RSHIFT", "LCONTROL", "RCONTROL", "LMENU", "RMENU" };
 
             // Check for keybind test
             if (!string.IsNullOrEmpty(KeyPressName) && KeyPressName.ToLower().Equals("test"))
@@ -85,45 +113,35 @@ namespace SimpleKeybindProxy.Controllers
             // Is a modifier key needed..
             if (KeyPressName.Length > 1 && KeyPressName.Contains("+"))
             {
-                if (KeyPressName.Contains("LSHIFT"))
+                string[] keyPressList = KeyPressName.Split("+");
+                foreach (string key in keyPressList)
                 {
-                    buttonHeld = VirtualKeyCode.LSHIFT;
+                    if (ModifierKeys.Any(a => a.Equals(key)))
+                    {
+                        // Key is either "LSHIFT", "RSHIFT", "LCONTROL", "RCONTROL", "LMENU", "RMENU"
+                        buttonHeld.Add(ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(key)));
+                    }
+                    else
+                    {
+                        buttonPress = ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(key));
+                    }
                 }
-                else if (KeyPressName.Contains("RSHIFT"))
-                {
-                    buttonHeld = VirtualKeyCode.RSHIFT;
-                }
-                else if (KeyPressName.Contains("LCONTROL"))
-                {
-                    buttonHeld = VirtualKeyCode.LCONTROL;
-                }
-                else if (KeyPressName.Contains("RCONTROL"))
-                {
-                    buttonHeld = VirtualKeyCode.RCONTROL;
-                }
-                else if (KeyPressName.Contains("LALT"))
-                {
-                    buttonHeld = VirtualKeyCode.MENU;
-                }
-                else if (KeyPressName.Contains("RALT"))
-                {
-                    buttonHeld = VirtualKeyCode.RMENU;
-                }
-                inputSimulator.Keyboard.KeyDown(buttonHeld.Value);
-                KeyPressName = KeyPressName.Split("+").Last();
+            }
+            else
+            {
+                buttonPress = ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(KeyPressName));
             }
 
-            VirtualKeyCode[] ListOfKeyPresses = Enum.GetValues<VirtualKeyCode>();
-            VirtualKeyCode? KeyToPress = ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(KeyPressName));
-            if (KeyToPress != null)
+            if (buttonHeld.Count > 0)
             {
-                inputSimulator.Keyboard.KeyPress(KeyToPress.Value);
+                foreach (VirtualKeyCode key in buttonHeld)
+                {
+                    inputSimulator.Keyboard.KeyDown(key);
+                }
             }
-
-            if (buttonHeld != null)
+            if (buttonPress.HasValue)
             {
-                inputSimulator.Keyboard.KeyUp(buttonHeld.Value);
-                buttonHeld = null;
+                inputSimulator.Keyboard.KeyPress(buttonPress.Value);
             }
 
             Console.WriteLine(rBind);

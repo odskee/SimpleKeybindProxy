@@ -39,7 +39,7 @@ namespace HttpListenerExample
 
             var BindSiteOption = new Option<string?>(
                 name: "-b",
-                description: "The directory / file where name -> keybind pairs can be found.  If no filename is supplied, binds.txt is used.  If no directory is supplied, the programs working directory is used");
+                description: "The directory where name -> keybind pairs can be found.  All .txt files are loaded in this folder");
 
             var IPOption = new Option<string?>(
                 name: "-a",
@@ -82,39 +82,16 @@ namespace HttpListenerExample
                 {
                     if (environmentName.Equals("Development"))
                     {
-                        BindLocation = "..\\..\\..\\Binds\\binds.txt";
+                        BindLocation = "..\\..\\..\\Binds\\";
                     }
                     else
                     {
-                        BindLocation = ".\\Binds\\binds.txt";
+                        BindLocation = ".\\Binds\\";
                     }
                 }
                 else
                 {
-                    string bindCorrected = bindDir.Replace("/", "\\");
-                    string[] fullOrSingle = bindDir.Split("\\");
-                    if (fullOrSingle.Count() > 1 && fullOrSingle.Last().Contains(".txt"))
-                    {
-                        // Path and name
-                        BindLocation = bindDir;
-                    }
-                    else if (fullOrSingle.Count() == 1)
-                    {
-                        // Just filename
-                        if (environmentName.Equals("Development"))
-                        {
-                            BindLocation = $"..\\..\\..\\Binds\\{bindDir}";
-                        }
-                        else
-                        {
-                            BindLocation = $".\\Binds\\{bindDir}";
-                        }
-                    }
-                    else
-                    {
-                        // Just Path
-                        BindLocation = bindDir + "/binds.txt";
-                    }
+                    BindLocation = bindDir;
                 }
 
                 if (string.IsNullOrEmpty(ip))

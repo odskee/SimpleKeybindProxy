@@ -216,7 +216,7 @@
 
         
         Right SHIFT key
-        RSHIFT = 0xA1,
+        RSHIFT
 
         
         Left CONTROL key

@@ -184,6 +184,7 @@ namespace Controllers.SimpleWebService
                     HttpListenerResponse resp = ctx.Response;
 
                     resp.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+                    resp.StatusCode = 200;
 
                     // Get Data from request
                     Stream body = req.InputStream;
