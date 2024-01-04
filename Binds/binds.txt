@@ -1,0 +1,5 @@
+FlapsInc,LCTRL+F
+FlapsDec,LALT_F
+GearDown,G
+GearUp,LSHIFT+G
+Test,LCONTROL+VK_A

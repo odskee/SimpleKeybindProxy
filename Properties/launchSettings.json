@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SimpleKeybindProxy": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
