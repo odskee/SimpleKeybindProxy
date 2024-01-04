@@ -27,25 +27,35 @@ You will also need to configure your binds.txt dictionary - by default this is i
 To run the program, run SimpleKeybindProxy.exe AS AN ADMINISTRATOR - if you do not give the program admin permissions the server likely won't start.  By default, you can access your landing sites at "http://localhost:8001" (See Usage below on how to change this).
 
 # Usage
+## Run SimpleKeybindProxy.exe
+Providing you are using the "Landing" and "Binds" folder contained within the same folder as SimpleKeybindProxy.exe, Right-Click and choose "Run as Administrator".  After a very short delay, the Keybind server is now running and listnening for requests.
+
+## Run From Console
+Running from the console allows you to change some settings.  To run from the command line, while holding Shift, right click in the SimpleKeybindProxy folder and choose 'open powershell window here'.  Alternatively, copy the folder location from the address bar and use 'cd' command in a powershell window (Start -> Search 'powershell' -> Right-Click and Run as Administrator):
+```
+cd "Paste_Here"
+```
+
 When running from the command line, you can provide the following arguments: 
 
 ```
--l - Define a custom Landing Site directory location.  Example: -l "C:\Folder1\LandingSites\"
+.\SimpleKeybindProxy.exe -l - Define a custom Landing Site directory location.  Example: -l "C:\Folder1\LandingSites\"
 
--b - Define the directory and / or keybind dictionary file.  Example: -b "C:\Folder1\Binds\" OR -b "C:\Folder1\Binds\bindfile.txt" OR -b "bindfile.txt"
+.\SimpleKeybindProxy.exe -b - Define the directory and / or keybind dictionary file.  Example: -b "C:\Folder1\Binds\" OR -b "C:\Folder1\Binds\bindfile.txt" OR -b "bindfile.txt"
 
--a - Define the IP address the server will listen for connections on.  Defaults to "*" or every address.  Example: -a 127.0.0.1
+.\SimpleKeybindProxy.exe -a - Define the IP address the server will listen for connections on.  Defaults to "*" or every address.  Example: -a 127.0.0.1
 
--p - Define the Port the server will listen for connections on.  Defaults to 8001.  Example: -p 1234
+.\SimpleKeybindProxy.exe -p - Define the Port the server will listen for connections on.  Defaults to 8001.  Example: -p 1234
 ```
 
 Once you have your binds defined and have created your landing site (or are using the samples), you can view them at _"http://localhost:8001/Directory_Structure_of_Landing_Site"_ (or the IP and Port you specified with -a / -p); for example, _http://localhost:8001/Landing1/_.
 
 The URL request structure needs to match your Landing Site directory structure.  For example, if you add "SitesByBob/Panel_1/" into the Landing Site folder, you can view this landing site at http://localhost:8001/SitesByBob/Pane_1/.
 
-When an interaction on a landing site requests a key press, the keybind name and Key Press will be displayed in the console output.  This can be tested using a "test" keybind name in the request - it does not need to be defined in a bind dictionary.
+When an interaction on a landing site requests a key press, the keybind name and Key Press will be displayed in the console output.  This can be tested using a "test" keybind name in the request - it does not need to be defined in a bind dictionary.  For Example, the following will mimic a Keybind request, visible in the consol output, and return the landing page for Landing1:
+> http://localhost:8001/Landing1/KeyBind_test/
 
-You can make a manual key press by requesting the KeyBind URL directly.  To do this, navigate to http://<server_address>:<server_port>/KeyBind_<name_of_keybind> - you don't need to include a Landing page in your request but if you don't, the server will show you the default error HTML - your keybind has still been processed as shown in the console window.
+As shown above, you can make a manual key press by requesting the KeyBind URL directly.  To do this, navigate to http://server_address:server_port/KeyBind_name_of_keybind - you don't need to include a Landing page in your request but if you don't, the server will show you the default error HTML - your keybind has still been processed as shown in the console window.
 
 # Making Custom Landing Sites
 ## Directory Structure
