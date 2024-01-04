@@ -68,7 +68,15 @@ You can create as many landing sites as you want, providing you use an appropria
 To create the landing site, add a new .html file - it **MUST** have the same name as the directory it resides in i.e. "Landing\BobsPanels\Panel_1\Panel_1.html".  If another name is used, the panel must be requested directly in the URL i.e. "/BobsPanels/Panel_1/index.html".
 
 ### Including Resources
-Currently, HTML and CSS are supported with images currently being worked on.  When you want to include a resource such as CSS stylesheet or images, you must use relative linking.  For example, if your CSS file is in the same directory as your html file, you would use href=".\style.css".
+Currently, the following resource types are supported:
+* HTML
+* CSS
+* PNG
+* SVG
+* JPEG/JPG
+* GIF
+
+When you want to include a resource such as CSS stylesheet or images, you must use relative linking.  For example, if your CSS file is in the same directory as your html file, you would use href=".\style.css".
 
 ## Making Keybind Requests
 You can issue a keybind request by making a POST request that terminates with "KeyBind_<name_of_Keybind>".  How you do this is up to you - one technique using JS is shown in the provided "Landing1" sample; by using the OnClick event and some JS, a POST request for a certain keybind name is sent when clicking on defined elements.
