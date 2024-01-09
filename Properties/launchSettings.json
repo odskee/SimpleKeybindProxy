@@ -2,6 +2,7 @@
   "profiles": {
     "SimpleKeybindProxy": {
       "commandName": "Project",
+      "commandLineArgs": "-v 2",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

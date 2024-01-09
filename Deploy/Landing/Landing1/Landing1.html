@@ -15,7 +15,7 @@
 			<div onclick="IssueBind('GearDn')">Lower Gear</div>
 			<div class="big" onclick="IssueBind('eject')">EJECT</div>
 			<div onclick="IssueBind('Test')">Test</div>
-			<div><img src=".\button.png"/></div>
+			<div></div>
 			<div></div>
 			<div></div>
 			<div></div>
@@ -57,9 +57,7 @@
 				form.setAttribute('action', 'KeyBind_' + bindName);
                 form.style.display = 'hidden';
                 document.body.appendChild(form)
-				form.submit();
-
-
+                form.submit();
             }
         </script>
     </body>

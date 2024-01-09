@@ -1,4 +1,7 @@
-﻿using SimpleKeybindProxy.Interfaces;
+﻿using Controllers.SimpleWebService;
+using Microsoft.Extensions.Logging;
+using SimpleKeybindProxy.Interfaces;
+using SimpleKeybindProxy.Models;
 using WindowsInput;
 using WindowsInput.Native;
 
@@ -18,15 +21,32 @@ namespace SimpleKeybindProxy.Controllers
     {
         public ICollection<KeyValuePair<string, string>> BindLibrary { get; set; }
         public string BindLibraryLocation { get; set; }
+        public ProgramOptions Options { get; set; }
+
+        private readonly ILogger logger;
 
 
-        public KeyBindController(string BindDirectory)
+        public KeyBindController(ILogger<HttpServer> _logger)
         {
             BindLibrary = new List<KeyValuePair<string, string>>();
-            BindLibraryLocation = BindDirectory;
+            logger = _logger;
         }
 
 
+        public void SetProgramOptions(ProgramOptions options)
+        {
+            Options = options;
+        }
+
+        public void SetBindLibraryLocation(string bindLibraryLocation)
+        {
+            BindLibraryLocation = bindLibraryLocation;
+        }
+
+        public int GetBindLibraryCount()
+        {
+            return BindLibrary.Count;
+        }
 
         // Loads the KeyBind File and creates a KeyValue Pair collection
         public partial async Task<bool> LoadKeyBindLibraryAsync()
@@ -36,6 +56,7 @@ namespace SimpleKeybindProxy.Controllers
             {
                 if (Directory.Exists(BindLibraryLocation))
                 {
+                    logger.LogDebug("Keybind directory found: {0}", BindLibraryLocation);
                     IEnumerable<string> bindsToLoad = Directory.EnumerateFiles(BindLibraryLocation);
                     foreach (string toLoad in bindsToLoad.Where(a => a.Contains(".txt")))
                     {
@@ -44,32 +65,36 @@ namespace SimpleKeybindProxy.Controllers
                         {
                             string[] paring = bind.Split(",");
                             BindLibrary.Add(new KeyValuePair<string, string>(paring[0].Trim(), paring[1].Trim()));
+
+                            logger.LogDebug("Keybind Mapping Detected: {0} maps to {1}", paring[0].Trim(), paring[1].Trim());
                         }
                     }
                 }
                 else
                 {
-                    Console.WriteLine("The provided Binds directory {} could not be loaded", BindLibraryLocation);
+                    logger.LogError($"The provided Binds directory {BindLibraryLocation} could not be loaded");
                     return false;
                 }
             }
             catch (DirectoryNotFoundException ex)
             {
-                Console.WriteLine("The provided Bind directory {0} could not be found", BindLibraryLocation);
+                logger.LogCritical(1, ex, "The provided Bind directory {0} could not be found");
+                logger.LogDebug("The provided Bind directory could not be found: {0}", ex.Message);
                 return false;
             }
             catch (UnauthorizedAccessException ex)
             {
-                Console.WriteLine("Insufficient persmissions to access Bind directory {0}", BindLibraryLocation);
+                logger.LogCritical(1, ex, "Insufficient permissions to access Bind directory:");
+                logger.LogDebug("Insufficient permissions to access Bind directory: {0}", ex.Message);
                 return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("There was a problem accessing your Bind Library: {0}{1}", Environment.NewLine, ex.Message);
+                logger.LogCritical(1, ex, "There was a problem accessing your Bind Library");
                 return false;
             }
 
-            Console.WriteLine("Bind Libarary loaded successfully.  {0} total binds found.", BindLibrary.Count);
+            logger.LogInformation("Bind Libarary loaded successfully.  {0} total binds found.", BindLibrary.Count);
             return true;
         }
 
@@ -88,13 +113,23 @@ namespace SimpleKeybindProxy.Controllers
             KeyValuePair<string, string>? bindMatch = BindLibrary.FirstOrDefault(a => a.Key.Equals(rBind));
             if (bindMatch.Value.Key == null || bindMatch.Value.Value == null)
             {
-                Console.WriteLine("Unknown Bind: {0}", rBind);
+                if (Options.VerbosityLevel > 1)
+                {
+                    Console.WriteLine("Unknown Bind: {0}", rBind);
+                }
+                logger.LogDebug("Unknown Bind Requested: {0}", rBind);
+
                 return false;
             }
 
             string KeyPressName = "";
             KeyPressName = bindMatch.Value.Value;
-            Console.WriteLine("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
+            logger.LogInformation("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
+            if (Options.VerbosityLevel > 1)
+            {
+                Console.WriteLine("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
+            }
+
 
             // Prep inputSimulator
             InputSimulator inputSimulator = new InputSimulator();
@@ -107,6 +142,8 @@ namespace SimpleKeybindProxy.Controllers
             // Check for keybind test
             if (!string.IsNullOrEmpty(KeyPressName) && KeyPressName.ToLower().Equals("test"))
             {
+                Console.WriteLine("Test Keybind Pressed");
+                logger.LogInformation("Test Keybind Pressed");
                 return true;
             }
 
@@ -132,19 +169,36 @@ namespace SimpleKeybindProxy.Controllers
                 buttonPress = ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(KeyPressName));
             }
 
-            if (buttonHeld.Count > 0)
-            {
-                foreach (VirtualKeyCode key in buttonHeld)
-                {
-                    inputSimulator.Keyboard.KeyDown(key);
-                }
-            }
-            if (buttonPress.HasValue)
-            {
-                inputSimulator.Keyboard.KeyPress(buttonPress.Value);
-            }
 
-            Console.WriteLine(rBind);
+            try
+            {
+                if (buttonHeld.Count > 0)
+                {
+                    foreach (VirtualKeyCode key in buttonHeld)
+                    {
+                        inputSimulator.Keyboard.KeyDown(key);
+                    }
+                }
+                if (buttonPress.HasValue)
+                {
+                    inputSimulator.Keyboard.KeyPress(buttonPress.Value);
+                }
+                if (buttonHeld.Count > 0)
+                {
+                    foreach (VirtualKeyCode key in buttonHeld)
+                    {
+                        inputSimulator.Keyboard.KeyUp(key);
+                    }
+                }
+
+                Console.WriteLine("Keybind: {0}", rBind);
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex.Message, ex);
+                return false;
+            }
 
             return true;
         }

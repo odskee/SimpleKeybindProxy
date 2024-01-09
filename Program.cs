@@ -13,8 +13,12 @@
 
 
 using Controllers.SimpleWebService;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using SimpleKeybindProxy.Controllers;
-using System.CommandLine;
+using SimpleKeybindProxy.Interfaces;
+using SimpleKeybindProxy.Models;
 using System.Net;
 
 namespace HttpListenerExample
@@ -24,122 +28,85 @@ namespace HttpListenerExample
 
         static async Task Main(string[] args)
         {
-            string LandingDir = "";
-            string BindLocation = "";
-            string Ip = "";
-            string Port = "";
-            string ServerAddess = "";
-            var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-            //static string TerminalURL(string caption, string url) => $"\u001B]8;;{url}\a{caption}\u001B]8;;\a";
+            // Command Line Args
+            ProgramOptions options = new ProgramOptions();
+            CommandArgsController argsController = new CommandArgsController();
+            var envName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "";
+            await argsController.SetProgramOptionsAsync(options, envName);
+            await argsController.BuildRootCommandAsync();
+            await argsController.ProcessArgumentsAsync(args);
 
-            // Build Arguments
-            var LandSiteOption = new Option<string?>(
-                name: "-l",
-                description: "The directory where your Landing sites are.  If not supplied, assumed to be the programs working directory");
-
-            var BindSiteOption = new Option<string?>(
-                name: "-b",
-                description: "The directory where name -> keybind pairs can be found.  All .txt files are loaded in this folder");
-
-            var IPOption = new Option<string?>(
-                name: "-a",
-                description: "The IP Address the server will accept connections on.  Accept connections in all using * (default)");
-
-            var PortOption = new Option<string?>(
-                name: "-p",
-                description: "The port the server will accept connections on.  Defaults to 8001");
-
-            var LandSiteCommand = new RootCommand("Simple Key Bind Proxy");
-
-            var readCommand = new Command("read", "Read and display the file.")
+            // Logging
+            if (options.VerbosityLevel > 1)
             {
-                LandSiteOption,
-                BindSiteOption,
-                IPOption,
-                PortOption
-            };
-            LandSiteCommand.AddCommand(readCommand);
-
-            readCommand.SetHandler(async (landingDir, bindDir, ip, port) =>
+                Log.Logger = new LoggerConfiguration()
+                    .WriteTo.File(options.Logfile, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                    .MinimumLevel.Verbose()
+                    .CreateLogger();
+            }
+            else
             {
-                if (string.IsNullOrEmpty(landingDir))
-                {
-                    if (environmentName.Equals("Development"))
-                    {
-                        LandingDir = "..\\..\\..\\Landing";
-                    }
-                    else
-                    {
-                        LandingDir = ".\\Landing";
-                    }
-                }
-                else
-                {
-                    LandingDir = landingDir;
-                }
+                Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Information()
+                    .WriteTo.File(options.Logfile, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                    .CreateLogger();
+            }
 
-                if (string.IsNullOrEmpty(bindDir))
-                {
-                    if (environmentName.Equals("Development"))
-                    {
-                        BindLocation = "..\\..\\..\\Binds\\";
-                    }
-                    else
-                    {
-                        BindLocation = ".\\Binds\\";
-                    }
-                }
-                else
-                {
-                    BindLocation = bindDir;
-                }
+            //Dependancy Injection
+            var services = new ServiceCollection()
+                .AddTransient<ISimpleWebServerController, HttpServer>()
+                .AddTransient<IKeyBindController, KeyBindController>()
+                .AddLogging(configure => configure.AddSerilog());
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-                if (string.IsNullOrEmpty(ip))
-                {
-                    Ip = "*";
-                }
-                else
-                {
-                    Ip = ip;
-                }
 
-                if (string.IsNullOrEmpty(port))
-                {
-                    Port = "8001";
-                }
-                else
-                {
-                    Port = port;
-                }
-            },
-            LandSiteOption, BindSiteOption, IPOption, PortOption);
-            var t = readCommand.InvokeAsync(args).Result;
+            //Get Logger
+            var logger = serviceProvider.GetService<ILogger<Program>>();
 
             // Set a properly built server address string
-            ServerAddess = $"http://{Ip}:{Port}/";
+            options.ServerAddess = $"http://{options.Ip}:{options.Port}/";
 
             // Initiate Keybind Controller
-            KeyBindController bindController = new KeyBindController(BindLocation);
+            KeyBindController bindController = (KeyBindController)serviceProvider.GetService(typeof(IKeyBindController));
+            bindController.SetBindLibraryLocation(options.BindLocation);
+            bindController.SetProgramOptions(options);
             if (!await bindController.LoadKeyBindLibraryAsync())
             {
                 // If we can't load any Keybinds then there is currently no other function the program serves - terminate.
+                Console.WriteLine($"Could not load any Keybind dictionaries at {options.BindLocation}");
                 return;
             }
+            else
+            {
+                Console.WriteLine("Bind Libarary loaded successfully.  {0} total binds found.", bindController.GetBindLibraryCount());
+            }
 
-            // Start Web Server
-            HttpServer httpServer = new HttpServer(bindController, LandingDir);
-            httpServer.Listener.Prefixes.Add(ServerAddess);
+            // Configure Web Server
+            HttpServer httpServer = (HttpServer)serviceProvider.GetService(typeof(ISimpleWebServerController));
+            httpServer.SetBindController(bindController);
+            httpServer.SetProgramOptions(options);
+            httpServer.Listener.Prefixes.Add(options.ServerAddess);
             httpServer.Listener.Start();
 
             if (!await httpServer.RegisterLandingSitesAsync())
             {
-                return;
+                Console.WriteLine($"Could not find any Landing sites to display at {options.BindLocation}");
+
+                if (options.IgnoreMissingLanding)
+                {
+                    logger.LogDebug($"Ignoring missing Landing Site(s)");
+                }
+                else
+                {
+                    return;
+                }
             }
 
             // Console Output - show all IP's this can be accessed on:
-            if (!ServerAddess.Contains("*"))
+            if (!options.ServerAddess.Contains("*"))
             {
-                Console.WriteLine("SimpleKeybindProxy has successfully started and can be accessed at {0}", ServerAddess);
+                logger.LogDebug($"SimpleKeybindProxy is attempting to start at http://{options.Ip}:{options.Port}/");
+                Console.WriteLine($"SimpleKeybindProxy is attempting to start at http://{options.Ip}:{options.Port}/");
             }
             else
             {
@@ -148,12 +115,15 @@ namespace HttpListenerExample
 
                 if (addr.Any())
                 {
-                    Console.WriteLine("SimpleKeybindProxy has successfully started and can be accessed at the following addresses:");
-                    Console.WriteLine($"http://localhost:{Port}/");
-                    Console.WriteLine($"http://127.0.0.1:{Port}/");
-                    foreach (IPAddress addrAddr in addr.Where(a => a.ToString().Contains(":") == false))
+                    Console.WriteLine("SimpleKeybindProxy can be accessed at the following addresses:");
+                    Console.WriteLine($"http://localhost:{options.Port}/");
+                    Console.WriteLine($"http://127.0.0.1:{options.Port}/");
+                    foreach (IPAddress add in addr)
                     {
-                        Console.WriteLine($"http://{addrAddr}:{Port}/");
+                        if (add.ToString().Contains(":") == false)
+                        {
+                            Console.WriteLine($"http://{add}:{options.Port}/");
+                        }
                     }
                 }
             }
@@ -168,19 +138,26 @@ namespace HttpListenerExample
                 Console.WriteLine("The following Landing Sites were detected:");
                 foreach (string site in LandingSites)
                 {
-                    Console.WriteLine($"> {ServerAddess.Replace("*", "localhost")}{site.Split("\\").Last()}/");
+                    Console.WriteLine($"> {options.ServerAddess.Replace("*", "localhost")}{site.Split("\\").Last()}/");
                 }
             }
 
+            Console.WriteLine($"");
             Console.WriteLine($"---------------------------------------");
+            Console.WriteLine($"Awaiting Requests");
+            Console.WriteLine($"---------------------------------------");
+            logger.LogInformation($"SimpleKeybindProxy is starting at http://{options.Ip}:{options.Port}/");
 
 
-            // Handle requests
+
+            // Start Request Handler
             Task listenTask = httpServer.HandleIncomingConnectionsAsync();
             listenTask.GetAwaiter().GetResult();
+
 
             // Close the listener
             httpServer.Listener.Close();
         }
+
     }
 }

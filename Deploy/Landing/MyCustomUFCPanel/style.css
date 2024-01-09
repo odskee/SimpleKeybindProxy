@@ -1,0 +1,114 @@
+﻿@import 'https://fonts.googleapis.com/css?family=Comfortaa:300,700|Bungee+Shade|Josefin+Sans:400';
+
+main {
+	display: grid;
+	height: 100vh;
+	grid-template-columns: 1fr;
+	grid-template-rows: minmax(1fr, 500px);
+}
+
+@media (min-width: 34em) {
+	main {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+.heading {
+	grid-row: span 3;
+}
+
+.intro {
+	grid-row: span 2;
+}
+
+@media (min-width: 34em) {
+	.intro {
+		grid-column: span 3;
+	}
+}
+
+div:nth-of-type(1) {
+	background: #07779c;
+}
+
+div:nth-of-type(2) {
+	background: #157c89;
+}
+
+div:nth-of-type(3) {
+	background: #238077;
+}
+
+div:nth-of-type(4) {
+	background: #318564;
+}
+
+div:nth-of-type(5) {
+	background: #3f8a52;
+}
+
+div:nth-of-type(6) {
+	background: #4d8e3f;
+}
+
+div:nth-of-type(7) {
+	background: #5b932c;
+}
+
+div:nth-of-type(8) {
+	background: #69971a;
+}
+
+div:nth-of-type(9) {
+	background: #779c07;
+}
+
+body {
+	background: #424242;
+	color: #fff;
+	font-family: Comfortaa, sans-serif;
+	font-weight: 300;
+	letter-spacing: 0.03rem;
+	line-height: 1;
+	margin: 0 auto;
+}
+
+h1 {
+	font-size: 4rem;
+	font-weight: 700;
+	margin: 0;
+}
+
+div {
+	color: #fff;
+	padding: 0.85rem;
+}
+
+@media (min-width: 34em) {
+	div {
+		padding: 1rem;
+	}
+}
+
+h2 {
+	font-size: 2rem;
+	display: inline-block;
+	font-weight: 300;
+	line-height: 1;
+	padding: 0;
+	margin: 0;
+}
+
+.demo-number {
+	font-family: "Bungee Shade", cursive;
+	font-size: 3.5rem;
+}
+
+a {
+	color: #fdf2fa;
+}
+
+p {
+	font-size: 1rem;
+	line-height: 1.5;
+}

@@ -1,5 +1,7 @@
-﻿using SimpleKeybindProxy.Controllers;
+﻿using Microsoft.Extensions.Logging;
+using SimpleKeybindProxy.Controllers;
 using SimpleKeybindProxy.Interfaces;
+using SimpleKeybindProxy.Models;
 using System.Net;
 using System.Text;
 
@@ -11,6 +13,7 @@ namespace Controllers.SimpleWebService
         public partial Task<bool> SetPageDataOnRequestAsync(string RequestedLandingSiteResource);
         public partial Task<bool> RegisterLandingSitesAsync();
         public partial List<string> GetListOfLandingSites();
+
     }
 
     public partial class HttpServer : ISimpleWebServerController
@@ -25,16 +28,25 @@ namespace Controllers.SimpleWebService
         private string LastPageDisplay { get; set; }
         private byte[] data { get; set; }
 
+        public ProgramOptions Options { get; set; }
+
+        private readonly ILogger logger;
 
 
         // Constructor
-        public HttpServer(KeyBindController bindController, string landingSiteLocation)
+        public HttpServer(ILogger<HttpServer> _logger, IKeyBindController keybindController)
         {
             Listener = new HttpListener();
-            BindController = bindController;
+            //BindController = bindController;
             LandSiteLocations = new HashSet<string>();
-            LandingSiteLocation = landingSiteLocation;
+            //LandingSiteLocation = landingSiteLocation;
+
+            logger = _logger;
         }
+
+
+        public void SetBindController(KeyBindController keyBindController) { BindController = keyBindController; }
+        public void SetProgramOptions(ProgramOptions options) { Options = options; LandingSiteLocation = options.LandingDir; }
 
 
 
@@ -52,7 +64,7 @@ namespace Controllers.SimpleWebService
             {
                 if (!Directory.Exists(LandingSiteLocation))
                 {
-                    Console.WriteLine("Landing Directory is either not set or cannot be found");
+                    logger.LogError("Landing Directory is either not set or cannot be found");
                     return false;
                 }
 
@@ -61,15 +73,17 @@ namespace Controllers.SimpleWebService
                 foreach (string ls in landingSites)
                 {
                     LandSiteLocations.Add(ls);
+                    logger.LogDebug("Landing Directory Added: {0}", ls);
+
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occured building landing sites:");
-                Console.WriteLine(ex.Message);
+                logger.LogCritical(1, ex, "Failed to load / access Landing Directory");
                 return false;
             }
 
+            logger.LogInformation("All Landing Sites Registered");
 
             return true;
         }
@@ -183,123 +197,144 @@ namespace Controllers.SimpleWebService
                     HttpListenerRequest req = ctx.Request;
                     HttpListenerResponse resp = ctx.Response;
 
-                    resp.AddHeader("Content-Type", "application/x-www-form-urlencoded");
-                    resp.StatusCode = 200;
-
-                    // Get Data from request
-                    Stream body = req.InputStream;
-                    Encoding encoding = req.ContentEncoding;
-                    StreamReader reader = new StreamReader(body, encoding);
-                    string s = reader.ReadToEnd();
-
-                    // Determine Request Landing Site / Resource
-                    if (ReservedWords.Any(s => req.Url.AbsolutePath.Contains(s)))
+                    // Bypass / refuse any favicon requests
+                    if (req.Url.AbsolutePath.Contains("favicon"))
                     {
-                        // Is a command to execute
-                        PageData = LastPageDisplay;
-                        resp.ContentType = "text/html";
-
-                        if (req.Url.AbsolutePath.Contains("/KeyBind_"))
-                        {
-                            await BindController.ProcessKeyBindRequestAsync(req.Url.AbsolutePath);
-                        }
-
-                        // Attempt to resolve a blank landing page for better feel
-                        if (string.IsNullOrEmpty(PageData) && string.IsNullOrEmpty(PageData))
-                        {
-                            // No Page data, if we have a URL request with a matching landing page, can generate this...
-                            await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
-                        }
+                        resp.StatusCode = 404;
+                        resp.Close();
                     }
                     else
                     {
-                        // Issue Console Output
-                        Console.WriteLine("Resource Requested: {0}", req.Url.AbsolutePath);
 
-                        // is a resource
-                        await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
 
-                        // Figure out content type to set
-                        if (req.Url.AbsolutePath.Contains(".css"))
+
+                        resp.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+                        resp.StatusCode = 200;
+
+                        // Get Data from request
+                        Stream body = req.InputStream;
+                        Encoding encoding = req.ContentEncoding;
+                        StreamReader reader = new StreamReader(body, encoding);
+                        string s = reader.ReadToEnd();
+
+                        // Determine Request Landing Site / Resource
+                        if (ReservedWords.Any(s => req.Url.AbsolutePath.Contains(s)))
                         {
-                            resp.ContentType = "text/css";
-                        }
-                        else if (req.Url.AbsolutePath.Contains(".png")
-                            || req.Url.AbsolutePath.Contains(".gif")
-                            || req.Url.AbsolutePath.Contains(".jpeg")
-                            || req.Url.AbsolutePath.Contains(".jpg")
-                            || req.Url.AbsolutePath.Contains(".svg"))
-                        {
-                            string fileLocation = LandingSiteLocation + req.Url.AbsolutePath.Replace("/", "\\");
-                            if (File.Exists(fileLocation))
+                            // Is a command to execute
+                            PageData = LastPageDisplay;
+                            resp.ContentType = "text/html";
+
+                            if (req.Url.AbsolutePath.Contains("/KeyBind_"))
                             {
-                                data = await File.ReadAllBytesAsync(fileLocation);
-                                PageDataSet = true;
+                                await BindController.ProcessKeyBindRequestAsync(req.Url.AbsolutePath);
+                            }
 
-                                switch (req.Url.AbsolutePath.Split(".").Last())
-                                {
-                                    case "png":
-                                    resp.ContentType = "image/png";
-                                    break;
-
-                                    case "gif":
-                                    resp.ContentType = "image/gif";
-                                    break;
-
-                                    case "jpeg":
-                                    resp.ContentType = "image/jpeg ";
-                                    break;
-
-                                    case "jpg":
-                                    resp.ContentType = "image/jpeg ";
-                                    break;
-
-                                    case "svg":
-                                    resp.ContentType = "image/svg+xml";
-                                    break;
-
-                                    default:
-                                    resp.ContentType = "text/html";
-                                    break;
-                                }
+                            // Attempt to resolve a blank landing page for better feel
+                            if (string.IsNullOrEmpty(PageData) && string.IsNullOrEmpty(PageData))
+                            {
+                                // No Page data, if we have a URL request with a matching landing page, can generate this...
+                                await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
                             }
                         }
                         else
                         {
-                            resp.ContentType = "text/html";
-                        }
-                    }
+                            // Issue Console Output
+                            Console.WriteLine("Resource Requested: {0}", req.Url.AbsolutePath);
 
+                            // is a resource
+                            await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
 
-                    if (!PageDataSet)
-                    {
-
-                        if (PageData != null)
-                        {
-                            data = Encoding.UTF8.GetBytes(PageData);
-                        }
-                        else
-                        {
-                            if (string.IsNullOrEmpty(LastPageDisplay))
+                            // Figure out content type to set
+                            if (req.Url.AbsolutePath.Contains(".css"))
                             {
-                                data = Encoding.UTF8.GetBytes("ERROR");
+                                resp.ContentType = "text/css";
+                            }
+                            else if (req.Url.AbsolutePath.Contains(".png")
+                                || req.Url.AbsolutePath.Contains(".gif")
+                                || req.Url.AbsolutePath.Contains(".jpeg")
+                                || req.Url.AbsolutePath.Contains(".jpg")
+                                || req.Url.AbsolutePath.Contains(".svg"))
+                            {
+                                string fileLocation = LandingSiteLocation + req.Url.AbsolutePath.Replace("/", "\\");
+                                if (File.Exists(fileLocation))
+                                {
+                                    data = await File.ReadAllBytesAsync(fileLocation);
+                                    PageDataSet = true;
+
+                                    switch (req.Url.AbsolutePath.Split(".").Last())
+                                    {
+                                        case "png":
+                                        resp.ContentType = "image/png";
+                                        break;
+
+                                        case "gif":
+                                        resp.ContentType = "image/gif";
+                                        break;
+
+                                        case "jpeg":
+                                        resp.ContentType = "image/jpeg ";
+                                        break;
+
+                                        case "jpg":
+                                        resp.ContentType = "image/jpeg ";
+                                        break;
+
+                                        case "svg":
+                                        resp.ContentType = "image/svg+xml";
+                                        break;
+
+                                        default:
+                                        resp.ContentType = "text/html";
+                                        break;
+                                    }
+                                }
                             }
                             else
                             {
-                                data = Encoding.UTF8.GetBytes(LastPageDisplay);
+                                resp.ContentType = "text/html";
                             }
                         }
+
+
+                        if (!PageDataSet)
+                        {
+
+                            if (PageData != null)
+                            {
+                                data = Encoding.UTF8.GetBytes(PageData);
+                            }
+                            else
+                            {
+                                if (string.IsNullOrEmpty(LastPageDisplay))
+                                {
+                                    data = Encoding.UTF8.GetBytes("ERROR");
+                                }
+                                else
+                                {
+                                    data = Encoding.UTF8.GetBytes(LastPageDisplay);
+                                }
+                            }
+                        }
+                        resp.ContentEncoding = Encoding.UTF8;
+                        resp.ContentLength64 = data.LongLength;
+                        resp.KeepAlive = true;
+
+                        // Write out to the response stream (asynchronously), then close it
+                        try
+                        {
+                            await resp.OutputStream.WriteAsync(data, 0, data.Length);
+                        }
+                        catch (HttpListenerException ex)
+                        {
+                            Console.WriteLine("General Error, see Log for more information");
+                        }
+                        PageDataSet = false;
+
+                        resp.Close();
                     }
-                    resp.ContentEncoding = Encoding.UTF8;
-                    resp.ContentLength64 = data.LongLength;
-
-                    // Write out to the response stream (asynchronously), then close it
-                    await resp.OutputStream.WriteAsync(data, 0, data.Length);
-                    PageDataSet = false;
-
-                    resp.Close();
                 }
             }
+
             catch (Exception ex)
             {
                 Console.WriteLine("General Error: {0}", ex.Message);
