@@ -36,6 +36,11 @@ namespace SimpleKeybindProxy.Controllers
             {
                 ProgramOptions.IgnoreMissingLanding = true;
             }
+            if (CommandArguments.Any(a => a.Equals("--noissue")))
+            {
+                ProgramOptions.PreventBindIssue = true;
+            }
+
 
             return ReadCommand.InvokeAsync(CommandArguments).Result;
         }
@@ -74,6 +79,10 @@ namespace SimpleKeybindProxy.Controllers
                     name: "--ignore",
                     description: "Ignore missing Landing site location(s).  I.e. run with externally hosted landing sites");
 
+                var NoKeybindIssueOption = new Option<string?>(
+                    name: "--noissue",
+                    description: "Don't actually send the requested keybind - use for testing.");
+
 
                 // Build Root Command
                 var LandSiteCommand = new RootCommand("Simple Key Bind Proxy");
@@ -86,12 +95,13 @@ namespace SimpleKeybindProxy.Controllers
                     PortOption,
                     VerbosityLevelOption,
                     LogDirOption,
-                    IgnoreLandingOption
+                    IgnoreLandingOption,
+                    NoKeybindIssueOption
                 };
                 LandSiteCommand.AddCommand(ReadCommand);
 
                 // Build Handlers
-                ReadCommand.SetHandler(async (landingDir, bindDir, ip, port, verbLevel, logDir, ignoreLanding) =>
+                ReadCommand.SetHandler(async (landingDir, bindDir, ip, port, verbLevel, logDir, ignoreLanding, noIssue) =>
                 {
                     await SetLandingSiteAsync(landingDir);
                     await SetBindingSiteAsync(bindDir);
@@ -119,7 +129,7 @@ namespace SimpleKeybindProxy.Controllers
 
 
                 },
-                LandSiteOption, BindSiteOption, IPOption, PortOption, VerbosityLevelOption, LogDirOption, IgnoreLandingOption);
+                LandSiteOption, BindSiteOption, IPOption, PortOption, VerbosityLevelOption, LogDirOption, IgnoreLandingOption, NoKeybindIssueOption);
 
 
 
@@ -240,18 +250,15 @@ namespace SimpleKeybindProxy.Controllers
             {
                 if (EnvironmentName.Equals("Development"))
                 {
-                    //ProgramOptions.BindLocation = "..\\..\\..\\Binds\\";
                     holdLoc = "..\\..\\..\\Logs\\";
                 }
                 else
                 {
-                    //ProgramOptions.BindLocation = ".\\Binds\\";
                     holdLoc = ".\\Logs\\";
                 }
             }
             else
             {
-                //ProgramOptions.BindLocation = BindSite;
                 holdLoc = LogDirectory;
             }
 
@@ -259,6 +266,23 @@ namespace SimpleKeybindProxy.Controllers
             {
                 if (Directory.Exists(holdLoc))
                 {
+                    string logFile = holdLoc + "Log.txt";
+                    if (File.Exists(logFile))
+                    {
+                        var creationDatetime = File.GetCreationTimeUtc(logFile);
+                        var ExpiredDatetime = creationDatetime.AddDays(1);
+
+                        if (ExpiredDatetime < DateTime.UtcNow)
+                        {
+                            // log file older than 24 hours, rename and create a new one
+                            var CreationTime = File.GetCreationTimeUtc(logFile);
+                            string oldLogFileName = holdLoc + $"Log_{CreationTime.ToString("ddMMyy_HHmm")}.txt";
+                            File.Move(logFile, oldLogFileName);
+                            //File.CreateText(logFile);
+                        }
+
+                    }
+
                     ProgramOptions.Logfile = holdLoc + "Log.txt";
                 }
                 else

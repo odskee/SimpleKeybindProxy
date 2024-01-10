@@ -1,9 +1,16 @@
 ﻿<!DOCTYPE html>
 <html>
-    <head>
-        <title>Simple Keybind Proxy</title>
-        <link rel="stylesheet" href=".\style.css" type="text/css">
-    </head>
+<head>
+	<title>Simple Keybind Proxy</title>
+	<link rel="stylesheet" href=".\style.css" type="text/css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+	<script>
+		function IssueBind(bindName) {
+			$.get("./", { Command: "KeyBind_Press", CommandData: bindName });
+		}
+	</script>
+</head>
     <body>
         <header>
             <h1>Sample Simple CSS layout for buttons</h1>
@@ -15,7 +22,7 @@
 			<div onclick="IssueBind('GearDn')">Lower Gear</div>
 			<div class="big" onclick="IssueBind('eject')">EJECT</div>
 			<div onclick="IssueBind('Test')">Test</div>
-			<div><img src=".\button.png"/></div>
+			<div ><img onclick="IssueBind('OpenMap')" src=".\button.png" /></div>
 			<div></div>
 			<div></div>
 			<div></div>
@@ -48,19 +55,5 @@
 			<div></div>
 			<div></div>
 		</main>
-
-        <script>
-            function IssueBind(bindName) {
-                var form = document.createElement('form');
-                form.setAttribute('method', 'post');
-                form.setAttribute('enctype', 'application/x-www-form-urlencoded');
-				form.setAttribute('action', 'KeyBind_' + bindName);
-                form.style.display = 'hidden';
-                document.body.appendChild(form)
-				form.submit();
-
-
-            }
-        </script>
     </body>
 </html>

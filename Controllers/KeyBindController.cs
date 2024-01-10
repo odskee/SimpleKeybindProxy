@@ -13,7 +13,7 @@ namespace SimpleKeybindProxy.Controllers
     public partial class KeyBindController : IKeyBindController
     {
         public partial Task<bool> LoadKeyBindLibraryAsync();
-        public partial Task<bool> ProcessKeyBindRequestAsync(string bindRequest);
+        public partial Task<bool> ProcessKeyBindRequestAsync(string RequestedBindName, KeypressType KeypressRequestType);
 
     }
 
@@ -24,6 +24,13 @@ namespace SimpleKeybindProxy.Controllers
         public ProgramOptions Options { get; set; }
 
         private readonly ILogger logger;
+
+        public enum KeypressType
+        {
+            KeyPress,
+            KeyHold,
+            KeyRelease
+        }
 
 
         public KeyBindController(ILogger<HttpServer> _logger)
@@ -58,6 +65,7 @@ namespace SimpleKeybindProxy.Controllers
                 {
                     logger.LogDebug("Keybind directory found: {0}", BindLibraryLocation);
                     IEnumerable<string> bindsToLoad = Directory.EnumerateFiles(BindLibraryLocation);
+                    BindLibrary.Clear();
                     foreach (string toLoad in bindsToLoad.Where(a => a.Contains(".txt")))
                     {
                         string[] _bindlibrary = await File.ReadAllLinesAsync(toLoad);
@@ -99,7 +107,7 @@ namespace SimpleKeybindProxy.Controllers
         }
 
         // Processing and issues a keypress based on the bind name / key mapping
-        public partial async Task<bool> ProcessKeyBindRequestAsync(string bindRequest)
+        public partial async Task<bool> ProcessKeyBindRequestAsync(string RequestedBindName, KeypressType KeypressRequestType)
         {
             if (BindLibrary.Count == 0)
             {
@@ -109,35 +117,32 @@ namespace SimpleKeybindProxy.Controllers
                 }
             }
 
-            string rBind = bindRequest.Split("/").First(a => a.Contains("KeyBind_")).Replace("KeyBind_", "");
-            KeyValuePair<string, string>? bindMatch = BindLibrary.FirstOrDefault(a => a.Key.Equals(rBind));
+            // Get the matching name to keypress pair from the keybind file
+            KeyValuePair<string, string>? bindMatch = BindLibrary.FirstOrDefault(a => a.Key.Equals(RequestedBindName));
             if (bindMatch.Value.Key == null || bindMatch.Value.Value == null)
             {
+                // The result we got was null, meaning no match was found
                 if (Options.VerbosityLevel > 1)
                 {
-                    Console.WriteLine("Unknown Bind: {0}", rBind);
+                    Console.WriteLine("Unknown Bind: {0}", RequestedBindName);
                 }
-                logger.LogDebug("Unknown Bind Requested: {0}", rBind);
-
+                logger.LogDebug("Unknown Bind Requested: {0}", RequestedBindName);
                 return false;
             }
+            string KeyPressName = bindMatch.Value.Key;
+            string KeyPressValue = bindMatch.Value.Value;
 
-            string KeyPressName = "";
-            KeyPressName = bindMatch.Value.Value;
-            logger.LogInformation("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
+
+            // 
+            logger.LogInformation("KeyBind {0} Initiated: {1}", KeyPressName, KeyPressValue);
             if (Options.VerbosityLevel > 1)
             {
-                Console.WriteLine("KeyBind {0} Initiated: {1}", bindMatch.Value.Key, KeyPressName);
+                Console.WriteLine("KeyBind {0} Initiated: {1}", KeyPressName, KeyPressValue);
             }
 
 
-            // Prep inputSimulator
-            InputSimulator inputSimulator = new InputSimulator();
-            List<VirtualKeyCode> buttonHeld = new List<VirtualKeyCode>();
-            VirtualKeyCode? buttonPress = null;
+            // Generate list of keypresses
             VirtualKeyCode[] ListOfKeyPresses = Enum.GetValues<VirtualKeyCode>();
-
-            string[] ModifierKeys = { "LSHIFT", "RSHIFT", "LCONTROL", "RCONTROL", "LMENU", "RMENU" };
 
             // Check for keybind test
             if (!string.IsNullOrEmpty(KeyPressName) && KeyPressName.ToLower().Equals("test"))
@@ -147,61 +152,169 @@ namespace SimpleKeybindProxy.Controllers
                 return true;
             }
 
-            // Is a modifier key needed..
-            if (KeyPressName.Length > 1 && KeyPressName.Contains("+"))
+
+            // Figure out what type of keypress we need to do
+            string[] keyPressList = KeyPressValue.Split("+");
+            if (keyPressList.Length == 1)
             {
-                string[] keyPressList = KeyPressName.Split("+");
-                foreach (string key in keyPressList)
-                {
-                    if (ModifierKeys.Any(a => a.Equals(key)))
-                    {
-                        // Key is either "LSHIFT", "RSHIFT", "LCONTROL", "RCONTROL", "LMENU", "RMENU"
-                        buttonHeld.Add(ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(key)));
-                    }
-                    else
-                    {
-                        buttonPress = ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(key));
-                    }
-                }
+                // if there is only one key in the list, we can check now and request the keypress
+                KeyBindRequest(KeypressRequestType, ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(keyPressList[0])));
             }
             else
             {
-                buttonPress = ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(KeyPressName));
+                ICollection<VirtualKeyCode> ModifierKeysList = new List<VirtualKeyCode>();
+                ICollection<VirtualKeyCode> KeyPressKeys = new List<VirtualKeyCode>();
+                foreach (string key in keyPressList)
+                {
+                    if (!ListOfKeyPresses.Any(a => a.ToString().Equals(key)))
+                    {
+                        // There are no instances of this key in the available to press, can't continue
+                        logger.LogError("Keypress is not valid: {0}", key);
+                        return false;
+                    }
+
+                    if (!keyPressList.Last().ToString().Equals(key))
+                    {
+                        // This is a modifier key(s), anything between + are modifiers, last entry will either be single key or keys separated by #
+                        ModifierKeysList.Add(ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(key)));
+                    }
+                    else
+                    {
+                        // Last keypress(s) in the list, any further ones seperated by #
+                        if (key.Contains("#"))
+                        {
+                            string[] listOfNonModifierKeys = key.Split("#");
+                            foreach (string nonModifierKey in listOfNonModifierKeys)
+                            {
+                                KeyPressKeys.Add(ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(nonModifierKey)));
+                            }
+                        }
+                        else
+                        {
+                            KeyPressKeys.Add(ListOfKeyPresses.FirstOrDefault(a => a.ToString().Equals(key)));
+
+                        }
+                    }
+                }
+                KeyBindRequest(KeypressRequestType, null, ModifierKeysList, KeyPressKeys);
             }
 
 
+            Console.WriteLine("Keybind: {0}", RequestedBindName);
+            return true;
+        }
+
+
+        private bool KeyBindRequest(KeypressType TypeOfKeypress, VirtualKeyCode? SingleKeyToPress = null, ICollection<VirtualKeyCode>? ModifierKeysList = null, ICollection<VirtualKeyCode>? KeyPressList = null)
+        {
+            InputSimulator inputSimulator = new InputSimulator();
+
+            if (!SingleKeyToPress.HasValue && ModifierKeysList?.Count == 0 && KeyPressList?.Count == 0)
+            {
+                logger.LogWarning("Keybind requested but binds not provided");
+                return false;
+            }
+
             try
             {
-                if (buttonHeld.Count > 0)
+                if (SingleKeyToPress.HasValue)
                 {
-                    foreach (VirtualKeyCode key in buttonHeld)
+                    // If we have a single key press request, detect type and issue request
+                    switch (TypeOfKeypress)
                     {
-                        inputSimulator.Keyboard.KeyDown(key);
-                    }
-                }
-                if (buttonPress.HasValue)
-                {
-                    inputSimulator.Keyboard.KeyPress(buttonPress.Value);
-                }
-                if (buttonHeld.Count > 0)
-                {
-                    foreach (VirtualKeyCode key in buttonHeld)
-                    {
-                        inputSimulator.Keyboard.KeyUp(key);
+                        case KeypressType.KeyPress:
+                        if (!Options.PreventBindIssue)
+                        {
+                            inputSimulator.Keyboard.KeyPress(SingleKeyToPress.Value);
+                        }
+                        logger.LogDebug("Keyboard input (KeyPress): {0}", SingleKeyToPress.Value);
+                        break;
+
+                        case KeypressType.KeyHold:
+                        if (!Options.PreventBindIssue)
+                        {
+                            inputSimulator.Keyboard.KeyDown(SingleKeyToPress.Value);
+                        }
+                        logger.LogDebug("Keyboard input (KeyDown): {0}", SingleKeyToPress.Value);
+                        break;
+
+                        case KeypressType.KeyRelease:
+                        if (!Options.PreventBindIssue)
+                        {
+                            inputSimulator.Keyboard.KeyUp(SingleKeyToPress.Value);
+                        }
+                        logger.LogDebug("Keyboard input (KeyUp): {0}", SingleKeyToPress.Value);
+                        break;
                     }
                 }
 
-                Console.WriteLine("Keybind: {0}", rBind);
+
+                if (ModifierKeysList?.Count > 0 || KeyPressList?.Count > 0)
+                {
+                    // If there are a list of either modifier or normal keypresses, detect the type and issue them.
+                    switch (TypeOfKeypress)
+                    {
+                        case KeypressType.KeyPress:
+                        if (!Options.PreventBindIssue)
+                        {
+                            inputSimulator.Keyboard.ModifiedKeyStroke(ModifierKeysList, KeyPressList);
+                        }
+                        logger.LogDebug("Keyboard input (Modified): {0}+{1}", ModifierKeysList, KeyPressList);
+                        break;
+
+                        case KeypressType.KeyHold:
+                        foreach (VirtualKeyCode keyToPress in ModifierKeysList)
+                        {
+                            if (!Options.PreventBindIssue)
+                            {
+                                inputSimulator.Keyboard.KeyDown(keyToPress);
+                            }
+                            logger.LogDebug("Keyboard input (KeyPress): {0}", keyToPress);
+                        }
+                        foreach (VirtualKeyCode keyToPress in KeyPressList)
+                        {
+                            if (!Options.PreventBindIssue)
+                            {
+                                inputSimulator.Keyboard.KeyDown(keyToPress);
+                            }
+                            logger.LogDebug("Keyboard input (KeyPress): {0}", keyToPress);
+                        }
+                        break;
+
+                        case KeypressType.KeyRelease:
+                        foreach (VirtualKeyCode keyToPress in ModifierKeysList)
+                        {
+                            if (!Options.PreventBindIssue)
+                            {
+                                inputSimulator.Keyboard.KeyUp(keyToPress);
+                            }
+                            logger.LogDebug("Keyboard input (KeyUp): {0}", keyToPress);
+
+                        }
+                        foreach (VirtualKeyCode keyToPress in KeyPressList)
+                        {
+                            if (!Options.PreventBindIssue)
+                            {
+                                inputSimulator.Keyboard.KeyUp(keyToPress);
+                            }
+                            logger.LogDebug("Keyboard input (KeyUp): {0}", keyToPress);
+                        }
+                        break;
+                    }
+                }
+
+                return true;
 
             }
             catch (Exception ex)
             {
-                logger.LogError(ex.Message, ex);
+                logger.LogCritical(1, ex, "Error while Switching keypress type");
                 return false;
             }
 
-            return true;
+
         }
+
 
     }
 }

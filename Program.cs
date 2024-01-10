@@ -151,13 +151,72 @@ namespace HttpListenerExample
 
 
             // Start Request Handler
-            Task listenTask = httpServer.HandleIncomingConnectionsAsync();
-            listenTask.GetAwaiter().GetResult();
+            await Task.Factory.StartNew(httpServer.HandleIncomingConnectionsAsync);
 
+            bool Running = true;
+            while (Running)
+            {
+                Console.Write("> ");
+                string input = Console.ReadLine();
+                await ProcessRunningArgs(input.Split(" "), options, bindController);
+                if (!string.IsNullOrEmpty(input) && input.ToLower().Equals("exit"))
+                {
+                    Running = false;
+                }
+            }
+
+            //await httpServer.HandleIncomingConnectionsAsync();
 
             // Close the listener
             httpServer.Listener.Close();
         }
 
+
+        static async Task ProcessRunningArgs(string[] args, ProgramOptions options, KeyBindController bindController)
+        {
+            if (args.Length == 0)
+            {
+                return;
+            }
+
+            switch (args.First())
+            {
+                case "v":
+                try
+                {
+                    if (!string.IsNullOrEmpty(args[1]))
+                    {
+                        int Verblevel = Int32.Parse(args[1]);
+                        options.VerbosityLevel = Verblevel;
+                        Console.WriteLine("Verbosity Level Changed to {0}", Verblevel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Unrecognised Command");
+                }
+                break;
+
+
+                case "reload":
+                if (await bindController.LoadKeyBindLibraryAsync())
+                {
+                    Console.WriteLine("Keybind dictionaries have been reloaded: {0} Entries", bindController.GetBindLibraryCount());
+                }
+                break;
+
+                case "showbinds":
+                foreach (var bind in bindController.BindLibrary)
+                {
+                    Console.WriteLine("{0} -> {1}", bind.Key, bind.Value);
+                }
+                Console.WriteLine("");
+                break;
+
+
+                default:
+                break;
+            }
+        }
     }
 }

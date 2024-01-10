@@ -10,6 +10,8 @@
         public int VerbosityLevel { get; set; }
         public string Logfile { get; set; }
         public bool IgnoreMissingLanding { get; set; }
+        public bool PreventBindIssue { get; set; }
+
 
     }
 }

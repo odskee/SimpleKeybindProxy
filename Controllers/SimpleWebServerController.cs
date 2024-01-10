@@ -18,7 +18,6 @@ namespace Controllers.SimpleWebService
 
     public partial class HttpServer : ISimpleWebServerController
     {
-        private static string[] ReservedWords = { "KeyBind" };
         public HttpListener Listener { get; set; }
         public string PageData;
         public string LandingSiteLocation { get; set; }
@@ -95,17 +94,12 @@ namespace Controllers.SimpleWebService
         {
             try
             {
-                if (RequestedLandingSiteResource.Contains("favicon.ico"))
-                {
-                    return false;
-                }
-
                 string[] requestBreakdown = RequestedLandingSiteResource.Split('/');
                 requestBreakdown = requestBreakdown.Where(x => !string.IsNullOrEmpty(x)).ToArray();
                 string rsource = "";
 
 
-                if (LandSiteLocations.Any(ls => ls.Contains(requestBreakdown[0])))
+                if (requestBreakdown.Length > 0 && LandSiteLocations.Any(ls => ls.Contains(requestBreakdown[0])))
                 {
                     string pTerminal = "/";
                     foreach (string rq in requestBreakdown.Where(a => LandSiteLocations.Any(b => b.Split("\\").Last().Equals(a)) == false))
@@ -121,8 +115,7 @@ namespace Controllers.SimpleWebService
                     // No matching pages could be found, show generic page
                     if (Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT").Equals("Development"))
                     {
-                        rsource = "..\\..\\HTML\\Landing.html";
-
+                        rsource = "..\\..\\..\\HTML\\Landing.html";
                     }
                     else
                     {
@@ -132,17 +125,7 @@ namespace Controllers.SimpleWebService
 
                 if (!rsource.Split("/").Last().Contains("."))
                 {
-                    if (ReservedWords.Any(s => rsource.Split("/").Last().Contains(s)))
-                    {
-                        // Command issued, remove command and apply .html to landing
-                        string[] rsourceSplit = rsource.Split("/");
-                        IEnumerable<string> rsourceCompiled = rsourceSplit.Take(rsourceSplit.Count() - 1);
-                        rsource = rsource.Replace(rsourceSplit.Last(), $"{rsourceCompiled.Last()}.html");
-                    }
-                    else
-                    {
-                        rsource = rsource + "/" + rsource.Split("/").Last() + ".html";
-                    }
+                    rsource = rsource + "/" + rsource.Split("/").Last() + ".html";
                 }
 
                 try
@@ -150,17 +133,20 @@ namespace Controllers.SimpleWebService
                     if (File.Exists(rsource))
                     {
                         PageData = await File.ReadAllTextAsync(rsource);
+                        logger.LogDebug("File found and contents read: {0}", rsource);
                     }
                     else
                     {
-                        PageData = await File.ReadAllTextAsync(LandingSiteLocation + "\\..\\HTML\\Landing.html");
+                        PageData = "<HTML><HEAD><meta charset=\"utf-8\"><title>SimpleKeybindProxy</title></head><body><h1>Program Error</h1></body></html>";
+                        logger.LogDebug("No resource data could be loaded");
                     }
 
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error loading resource: {0}", ex.Message);
-                    throw;
+                    Console.WriteLine("Error loading resource, See log for further info");
+                    logger.LogCritical(1, ex, "Error loading resource");
+                    return false;
                 }
 
                 if (rsource.Contains(".html") && !rsource.Contains("Error.html"))
@@ -172,8 +158,9 @@ namespace Controllers.SimpleWebService
             }
             catch (Exception ex)
             {
-                Console.WriteLine("General Error: {0}", ex.Message);
-                throw;
+                Console.WriteLine("General Error, See log for further info");
+                logger.LogCritical(1, ex, "General error finding resource");
+                return false;
             }
         }
 
@@ -206,94 +193,142 @@ namespace Controllers.SimpleWebService
                     else
                     {
 
-
-
+                        string CommandToExecute = "";
+                        string CommandData = "";
                         resp.AddHeader("Content-Type", "application/x-www-form-urlencoded");
                         resp.StatusCode = 200;
 
-                        // Get Data from request
-                        Stream body = req.InputStream;
-                        Encoding encoding = req.ContentEncoding;
-                        StreamReader reader = new StreamReader(body, encoding);
-                        string s = reader.ReadToEnd();
-
                         // Determine Request Landing Site / Resource
-                        if (ReservedWords.Any(s => req.Url.AbsolutePath.Contains(s)))
+                        if (req.Url.Query.Length > 2)
                         {
-                            // Is a command to execute
-                            PageData = LastPageDisplay;
-                            resp.ContentType = "text/html";
-
-                            if (req.Url.AbsolutePath.Contains("/KeyBind_"))
+                            // We have some query attached to the request
+                            string queryTidy = req.Url.Query;
+                            if (req.Url.Query.StartsWith("?"))
                             {
-                                await BindController.ProcessKeyBindRequestAsync(req.Url.AbsolutePath);
+                                queryTidy = req.Url.Query.Replace("?", "");
                             }
 
-                            // Attempt to resolve a blank landing page for better feel
-                            if (string.IsNullOrEmpty(PageData) && string.IsNullOrEmpty(PageData))
+                            string[] queryBreakdown = queryTidy.Split("&");
+
+
+
+                            // Check for a command attribute
+                            if (queryBreakdown.Any(a => a.Split("=").Any(a => a.ToLower().Equals("command"))))
                             {
-                                // No Page data, if we have a URL request with a matching landing page, can generate this...
-                                await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
+                                // Command found, extract command and data
+                                CommandToExecute = queryBreakdown.FirstOrDefault(a => a.Split("=").Any(a => a.ToLower().Equals("command"))).Split("=")[1];
+                                if (queryBreakdown.Any(a => a.Split("=").Any(a => a.ToLower().Equals("commanddata"))))
+                                {
+                                    CommandData = queryBreakdown.FirstOrDefault(a => a.Split("=").Any(a => a.ToLower().Equals("commanddata"))).Split("=")[1];
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(CommandToExecute) && CommandToExecute.StartsWith("KeyBind"))
+                            {
+                                // Is a command to execute
+                                PageData = LastPageDisplay;
+                                resp.ContentType = "text/html";
+
+                                if (!string.IsNullOrEmpty(CommandData))
+                                {
+                                    KeyBindController.KeypressType keypressType = KeyBindController.KeypressType.KeyPress;
+
+                                    if (CommandToExecute.ToLower().Equals("keybind_press"))
+                                    {
+                                        keypressType = KeyBindController.KeypressType.KeyPress;
+                                    }
+                                    else if (CommandToExecute.ToLower().Equals("keybind_hold"))
+                                    {
+                                        keypressType = KeyBindController.KeypressType.KeyHold;
+                                    }
+                                    else if (CommandToExecute.ToLower().Equals("keybind_release"))
+                                    {
+                                        keypressType = KeyBindController.KeypressType.KeyRelease;
+                                    }
+
+                                    if (!await BindController.ProcessKeyBindRequestAsync(CommandData, keypressType))
+                                    {
+                                        // Problem occured during the keybind issue request
+                                        Console.WriteLine("A problem occured trying to issue your requested keybind: {0}", CommandData);
+                                    }
+                                }
+
+                                // Attempt to resolve a blank landing page for better feel
+                                if (string.IsNullOrEmpty(PageData) && string.IsNullOrEmpty(LastPageDisplay))
+                                {
+                                    // No Page data, if we have a URL request with a matching landing page, can generate this...
+                                    await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
+                                }
+                            }
+                        }
+
+
+
+                        // Issue Console Output
+                        if (Options.VerbosityLevel > 1)
+                        {
+                            Console.WriteLine("Resource Requested: {0} by {1}", req.Url.AbsolutePath, req.RemoteEndPoint);
+                        }
+                        logger.LogInformation("Resource Requested: {0} by {1}", req.Url.AbsolutePath, req.RemoteEndPoint);
+
+                        // is a resource
+                        await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
+
+                        // Figure out content type to set
+                        if (req.Url.AbsolutePath.Contains(".css"))
+                        {
+                            resp.ContentType = "text/css";
+                        }
+                        else if (req.Url.AbsolutePath.Contains(".png")
+                            || req.Url.AbsolutePath.Contains(".js")
+                            || req.Url.AbsolutePath.Contains(".gif")
+                            || req.Url.AbsolutePath.Contains(".jpeg")
+                            || req.Url.AbsolutePath.Contains(".jpg")
+                            || req.Url.AbsolutePath.Contains(".svg"))
+                        {
+                            string fileLocation = LandingSiteLocation + req.Url.AbsolutePath.Replace("/", "\\");
+                            if (File.Exists(fileLocation))
+                            {
+                                data = await File.ReadAllBytesAsync(fileLocation);
+                                PageDataSet = true;
+
+                                switch (req.Url.AbsolutePath.Split(".").Last())
+                                {
+                                    case "png":
+                                    resp.ContentType = "image/png";
+                                    break;
+
+                                    case "js":
+                                    resp.ContentType = "text/javascript";
+                                    break;
+
+                                    case "gif":
+                                    resp.ContentType = "image/gif";
+                                    break;
+
+                                    case "jpeg":
+                                    resp.ContentType = "image/jpeg ";
+                                    break;
+
+                                    case "jpg":
+                                    resp.ContentType = "image/jpeg ";
+                                    break;
+
+                                    case "svg":
+                                    resp.ContentType = "image/svg+xml";
+                                    break;
+
+                                    default:
+                                    resp.ContentType = "text/html";
+                                    break;
+                                }
                             }
                         }
                         else
                         {
-                            // Issue Console Output
-                            Console.WriteLine("Resource Requested: {0}", req.Url.AbsolutePath);
-
-                            // is a resource
-                            await SetPageDataOnRequestAsync(req.Url.AbsolutePath);
-
-                            // Figure out content type to set
-                            if (req.Url.AbsolutePath.Contains(".css"))
-                            {
-                                resp.ContentType = "text/css";
-                            }
-                            else if (req.Url.AbsolutePath.Contains(".png")
-                                || req.Url.AbsolutePath.Contains(".gif")
-                                || req.Url.AbsolutePath.Contains(".jpeg")
-                                || req.Url.AbsolutePath.Contains(".jpg")
-                                || req.Url.AbsolutePath.Contains(".svg"))
-                            {
-                                string fileLocation = LandingSiteLocation + req.Url.AbsolutePath.Replace("/", "\\");
-                                if (File.Exists(fileLocation))
-                                {
-                                    data = await File.ReadAllBytesAsync(fileLocation);
-                                    PageDataSet = true;
-
-                                    switch (req.Url.AbsolutePath.Split(".").Last())
-                                    {
-                                        case "png":
-                                        resp.ContentType = "image/png";
-                                        break;
-
-                                        case "gif":
-                                        resp.ContentType = "image/gif";
-                                        break;
-
-                                        case "jpeg":
-                                        resp.ContentType = "image/jpeg ";
-                                        break;
-
-                                        case "jpg":
-                                        resp.ContentType = "image/jpeg ";
-                                        break;
-
-                                        case "svg":
-                                        resp.ContentType = "image/svg+xml";
-                                        break;
-
-                                        default:
-                                        resp.ContentType = "text/html";
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                resp.ContentType = "text/html";
-                            }
+                            resp.ContentType = "text/html";
                         }
+
 
 
                         if (!PageDataSet)
@@ -327,6 +362,8 @@ namespace Controllers.SimpleWebService
                         catch (HttpListenerException ex)
                         {
                             Console.WriteLine("General Error, see Log for more information");
+                            logger.LogCritical(1, ex, "General Error");
+                            resp.StatusCode = 500;
                         }
                         PageDataSet = false;
 
@@ -337,7 +374,8 @@ namespace Controllers.SimpleWebService
 
             catch (Exception ex)
             {
-                Console.WriteLine("General Error: {0}", ex.Message);
+                Console.WriteLine("General Error, see log for more information");
+                logger.LogCritical(1, ex, "Error Serving Request");
                 throw;
             }
         }
