@@ -22,15 +22,16 @@ namespace SimpleKeybindProxy.Controllers
         public ICollection<KeyValuePair<string, string>> BindLibrary { get; set; }
         public string BindLibraryLocation { get; set; }
         public ProgramOptions Options { get; set; }
-
-        private readonly ILogger logger;
-
         public enum KeypressType
         {
             KeyPress,
             KeyHold,
             KeyRelease
         }
+
+
+
+        private readonly ILogger logger;
 
 
         public KeyBindController(ILogger<HttpServer> _logger)
@@ -40,20 +41,8 @@ namespace SimpleKeybindProxy.Controllers
         }
 
 
-        public void SetProgramOptions(ProgramOptions options)
-        {
-            Options = options;
-        }
 
-        public void SetBindLibraryLocation(string bindLibraryLocation)
-        {
-            BindLibraryLocation = bindLibraryLocation;
-        }
 
-        public int GetBindLibraryCount()
-        {
-            return BindLibrary.Count;
-        }
 
         // Loads the KeyBind File and creates a KeyValue Pair collection
         public partial async Task<bool> LoadKeyBindLibraryAsync()
@@ -72,7 +61,17 @@ namespace SimpleKeybindProxy.Controllers
                         foreach (string bind in _bindlibrary)
                         {
                             string[] paring = bind.Split(",");
-                            BindLibrary.Add(new KeyValuePair<string, string>(paring[0].Trim(), paring[1].Trim()));
+
+                            if (BindLibrary.Any(a => a.Key.Equals(paring[0].Trim())))
+                            {
+                                // make sure we don't already have a bind with the same name
+                                logger.LogInformation("A duplicate keybind name was detected: {0}", paring[0].Trim());
+                                Console.WriteLine("A duplicate keybind was detected: {0}", paring[0].Trim());
+                            }
+                            else
+                            {
+                                BindLibrary.Add(new KeyValuePair<string, string>(paring[0].Trim(), paring[1].Trim()));
+                            }
 
                             logger.LogDebug("Keybind Mapping Detected: {0} maps to {1}", paring[0].Trim(), paring[1].Trim());
                         }
@@ -105,6 +104,7 @@ namespace SimpleKeybindProxy.Controllers
             logger.LogInformation("Bind Libarary loaded successfully.  {0} total binds found.", BindLibrary.Count);
             return true;
         }
+
 
         // Processing and issues a keypress based on the bind name / key mapping
         public partial async Task<bool> ProcessKeyBindRequestAsync(string RequestedBindName, KeypressType KeypressRequestType)
@@ -205,6 +205,7 @@ namespace SimpleKeybindProxy.Controllers
         }
 
 
+        // Handles the actual keybind request using Input Simulator.  Checks to ensure noissue has not been enabled.
         private bool KeyBindRequest(KeypressType TypeOfKeypress, VirtualKeyCode? SingleKeyToPress = null, ICollection<VirtualKeyCode>? ModifierKeysList = null, ICollection<VirtualKeyCode>? KeyPressList = null)
         {
             InputSimulator inputSimulator = new InputSimulator();
@@ -315,6 +316,26 @@ namespace SimpleKeybindProxy.Controllers
 
         }
 
+
+        // Sets the program options property
+        public void SetProgramOptions(ProgramOptions options)
+        {
+            Options = options;
+        }
+
+
+        // Sets the bind library locaion
+        public void SetBindLibraryLocation(string bindLibraryLocation)
+        {
+            BindLibraryLocation = bindLibraryLocation;
+        }
+
+
+        // Returns the count of the current BindLibrary list
+        public int GetBindLibraryCount()
+        {
+            return BindLibrary.Count;
+        }
 
     }
 }

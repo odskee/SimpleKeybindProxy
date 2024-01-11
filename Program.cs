@@ -25,7 +25,6 @@ namespace HttpListenerExample
 {
     internal class Program
     {
-
         static async Task Main(string[] args)
         {
             // Command Line Args
@@ -59,7 +58,6 @@ namespace HttpListenerExample
                 .AddLogging(configure => configure.AddSerilog());
             IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-
             //Get Logger
             var logger = serviceProvider.GetService<ILogger<Program>>();
 
@@ -83,15 +81,30 @@ namespace HttpListenerExample
 
             // Configure Web Server
             HttpServer httpServer = (HttpServer)serviceProvider.GetService(typeof(ISimpleWebServerController));
-            httpServer.SetBindController(bindController);
             httpServer.SetProgramOptions(options);
             httpServer.Listener.Prefixes.Add(options.ServerAddess);
-            httpServer.Listener.Start();
+            try
+            {
+                httpServer.Listener.Start();
 
+            }
+            catch (HttpListenerException ex)
+            {
+                Console.WriteLine("One or more the provided addresses could be bound too, server cannot start.  Try specifying a manual address with -a");
+                logger.LogCritical(1, ex, "Error binding to address");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("A general failure occured trying to bind to one or more addresses");
+                logger.LogCritical(1, ex, "Error binding to address");
+                return;
+            }
+
+            // Register landing sites
             if (!await httpServer.RegisterLandingSitesAsync())
             {
                 Console.WriteLine($"Could not find any Landing sites to display at {options.BindLocation}");
-
                 if (options.IgnoreMissingLanding)
                 {
                     logger.LogDebug($"Ignoring missing Landing Site(s)");
@@ -165,8 +178,6 @@ namespace HttpListenerExample
                 }
             }
 
-            //await httpServer.HandleIncomingConnectionsAsync();
-
             // Close the listener
             httpServer.Listener.Close();
         }
@@ -209,6 +220,48 @@ namespace HttpListenerExample
                 foreach (var bind in bindController.BindLibrary)
                 {
                     Console.WriteLine("{0} -> {1}", bind.Key, bind.Value);
+                }
+                Console.WriteLine("");
+                break;
+
+                case "ignore":
+                if (!string.IsNullOrEmpty(args[1]))
+                {
+                    if (args[1].Equals("1") || args[1].ToLower().Equals("y"))
+                    {
+                        options.IgnoreMissingLanding = true;
+                        Console.WriteLine("Ignore Missing Landing Sites enabled");
+                    }
+                    else if (args[1].Equals("0") || args[1].ToLower().Equals("n"))
+                    {
+                        options.IgnoreMissingLanding = false;
+                        Console.WriteLine("Ignore Missing Landing Sites disabled");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unknown Command");
+                    }
+                }
+                Console.WriteLine("");
+                break;
+
+                case "noissue":
+                if (!string.IsNullOrEmpty(args[1]))
+                {
+                    if (args[1].Equals("1") || args[1].ToLower().Equals("y"))
+                    {
+                        options.IgnoreMissingLanding = true;
+                        Console.WriteLine("Keypresses will no longer be issued");
+                    }
+                    else if (args[1].Equals("0") || args[1].ToLower().Equals("n"))
+                    {
+                        options.IgnoreMissingLanding = false;
+                        Console.WriteLine("Keypresses will be issued");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unknown Command");
+                    }
                 }
                 Console.WriteLine("");
                 break;

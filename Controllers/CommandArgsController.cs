@@ -277,10 +277,12 @@ namespace SimpleKeybindProxy.Controllers
                             // log file older than 24 hours, rename and create a new one
                             var CreationTime = File.GetCreationTimeUtc(logFile);
                             string oldLogFileName = holdLoc + $"Log_{CreationTime.ToString("ddMMyy_HHmm")}.txt";
+                            if (File.Exists(oldLogFileName))
+                            {
+                                File.Move(oldLogFileName, oldLogFileName + ".bac");
+                            }
                             File.Move(logFile, oldLogFileName);
-                            //File.CreateText(logFile);
                         }
-
                     }
 
                     ProgramOptions.Logfile = holdLoc + "Log.txt";

@@ -22,7 +22,7 @@ namespace Controllers.SimpleWebService
         public string PageData;
         public string LandingSiteLocation { get; set; }
         public ICollection<string> LandSiteLocations { get; set; }
-        public KeyBindController BindController { get; set; }
+        public IKeyBindController BindController { get; set; }
 
         private string LastPageDisplay { get; set; }
         private byte[] data { get; set; }
@@ -36,7 +36,7 @@ namespace Controllers.SimpleWebService
         public HttpServer(ILogger<HttpServer> _logger, IKeyBindController keybindController)
         {
             Listener = new HttpListener();
-            //BindController = bindController;
+            BindController = keybindController;
             LandSiteLocations = new HashSet<string>();
             //LandingSiteLocation = landingSiteLocation;
 
@@ -44,16 +44,6 @@ namespace Controllers.SimpleWebService
         }
 
 
-        public void SetBindController(KeyBindController keyBindController) { BindController = keyBindController; }
-        public void SetProgramOptions(ProgramOptions options) { Options = options; LandingSiteLocation = options.LandingDir; }
-
-
-
-        // Returns a list of Landing Sites
-        public partial List<string> GetListOfLandingSites()
-        {
-            return LandSiteLocations.ToList();
-        }
 
 
         // Enumerates and registers the Landing Sites
@@ -86,7 +76,6 @@ namespace Controllers.SimpleWebService
 
             return true;
         }
-
 
 
         // Sets the page data based on a requested URI.  Assumes the URI incoming is valid.
@@ -163,7 +152,6 @@ namespace Controllers.SimpleWebService
                 return false;
             }
         }
-
 
 
         // Handles incoming connections from the web server and responds accordingly.
@@ -379,5 +367,16 @@ namespace Controllers.SimpleWebService
                 throw;
             }
         }
+
+
+        // Returns a list of Landing Sites
+        public partial List<string> GetListOfLandingSites()
+        {
+            return LandSiteLocations.ToList();
+        }
+
+
+        // Sets the Options property
+        public void SetProgramOptions(ProgramOptions options) { Options = options; LandingSiteLocation = options.LandingDir; }
     }
 }
