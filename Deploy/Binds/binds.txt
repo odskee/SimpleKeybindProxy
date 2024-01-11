@@ -1,5 +1,6 @@
-FlapsInc,LCTRL+F
+FlapsInc,LCTRL+LMENU+LSHIFT+F
 FlapsDec,LALT_F
-GearDown,G
+GearDn,G
 GearUp,LSHIFT+G
-Test,LCONTROL+VK_A
+Test,LCONTROL+LMENU+VK_A
+OpenMap,VK_M
