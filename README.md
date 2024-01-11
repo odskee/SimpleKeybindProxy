@@ -4,6 +4,13 @@ A simple C# / .NET Console Keybind proxy
 # Changes 11/01/2024
 Substantial changes have been made to the way SKP operates.
 
+## Next Planned
++ Implement sockets for 2-way control
++ replace Input Simulator with self wrapped win32 library
++ Better generic sample Landing page
++ Code restructure for game / application specific use
+
+
 <br />
 
 # Description / What does it do?
@@ -130,7 +137,6 @@ The name of the keybind is chosen by you and can be anything you want - each one
 
 It is also suggested to provide a template keybind dictionary that lists all keybind names you've used in your landing site - this makes it much easier to both keep binds seperate and tie them to actual keyboard inputs.
 
-<br />
 
 ### JS Sample
 The following shows a very simple example of how to use / make a keybind request:
