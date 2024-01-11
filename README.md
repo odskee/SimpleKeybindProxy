@@ -4,11 +4,12 @@ A simple C# / .NET Console Keybind proxy
 # Changes 11/01/2024
 Substantial changes have been made to the way SKP operates.
 
-#
+<br />
 
 # Description / What does it do?
 A simple and very light weight Key Press Proxy server - allowing you to run keyboard inputs from any remote device on your network that has a web browser.  It starts a leight-weight web server accessible over local network, providing the requested landing Site(s).  A landing site is a website that represents your inputs - it can look however you like, with any style of buttons, switches and sliders etc.  Paired with this is a keybind dictionary, which translates keybind names into the specific keyboard inputs for that action.  Multiple landing site and keybind dictionaries can be created and used all at the same time, allowing multiple virtualised button boxes to be created.
 
+<br />
 
 # How Does it Work?
 Running SimpleKeyBindProxy.exe starts a local web server with a specified landing site directory as it's base.  When a request is received, the URL is converted in a corresponding directory structure i.e. *localhost:8001/Landing1/Panel_1/* would translate to *.\Landing\Landing1\Panel_1*.  SSK now uses the GET method to detect and process keybind requests, with multiple request types now available.  If the URL contains the parameters "Command" and "CommandData", the values of these are inspected and processed.  The "Command" parameter dictates what action is being requested, while the "CommandData" parameter supplies any data required to complete the requested action; for keybinds, the command would specify the type of keypress while commandData would specify the name of the keybind requested.
@@ -18,6 +19,7 @@ Keybind command requests will specify a name of the keybind they are requesting,
 ## Landing Sites and Keybind dictionaries
 The idea is when creating a landing site, a template keybind dictionary should be provided.  SKP will import all dictionaries found within the Binds directory, so these can be seperated into multiple files that correspond to a specific landing site.  Landing sites can be created by yourself or others, and be as simple or complex as you would like. 
 
+<br />
 
 # Setup
 Downloaded the latest version:
@@ -29,11 +31,14 @@ There are two sample Landing Sites to give a very, very basic demonstration with
 
 To run the program, run SimpleKeybindProxy.exe AS AN ADMINISTRATOR - the server likely will not start without admin rights.  The console output will show you both what network addresses it can be accessed on and the landing site URL's it has detected.  By default, you can access your landing sites at "http://localhost:8001/" (See Usage below on how to change this).
 
+<br />
 
 # Usage
 ## Starting SKP
 ### Run SimpleKeybindProxy.exe
 Providing you are using the default "Landing" and "Binds" folders, Right-Click SimpleKeybindProxy.exe and choose "Run as Administrator".  SKP will then start and once running, begin listnening for requests.  The output at this time will show you both the network addresses it's accessible on and the landing site URL's for each landing site you have.
+
+<br />
 
 ### Run From Console
 Power / Advances users can run directly from the command line with additional arguments.  Note, some (and soon all) of these can be configured within the running console.  Make sure you run from a Powershell / Terminal window with admin rights.
@@ -50,6 +55,7 @@ The following arguments are available:
 --ignore - Ignore missing Landing site location(s).  I.e. run with externally hosted landing sites
 --noissue Don't actually send the requested keybind - use for testing.
 ```
+<br />
 
 ## Interacting with Simple Keybind Proxy
 Once SKP is running, you can view your landing sites at _"http://localhost:8001/Directory_Structure_of_Landing_Site"_ (or the IP and Port you specified with -a / -p); for example, _http://localhost:8001/Landing1/_.
@@ -65,13 +71,14 @@ showbinds - Shows all bind names to keypress pairs in your dictionaries.  Exampl
 
 Verbosity level sets how noisy the output is - by default this is 1.  With this value, you will see the keybind name and matching keypress shown in the console window, along with the source of the request.  With Verbosity level 2, all requests are shown in addition to a trace of the keybind execution.
 
+<br />
 
 ## Setting Your Binds
 The bind dictionary is a simple txt file that specifies the name of a keybind, a comma (,) then the 'system' name for the key press - an example can be found in Apendix 2.
 
 You can combine as many modifiers as you like by using the plus (+) symbol and can combine as many key presses with the hash (#) symbol.  For example: LMENU+LSHIFT+VK_A#VK_B which would: press and hold left alt and left shift, press and release 'A' then 'B' and finally release left shift and left alt - the last keypress after a + is not treated as modifier.
 
-
+<br />
 
 ## Making keybind requests
 You can either make a keybind request manually by 'building' the URL yourself, use one of the Landing site examples or create your own.  See the section below on creating your own landing site.
@@ -89,11 +96,14 @@ As shown above, you can make a manual key press by requesting the KeyBind URL di
 Locate and open you binds.txt file (or create a new blank .txt file in the same folder).  Add the following entry *"ScreenSample, SCREENSHOT"* then save and close the file.  Start SKP and browse to the following address *"http://localhost:8001/?Command=KeyPress&CommandData=ScreenSample"*.  This will show both the request in the SKP console window while also pressing the print screen keyboard key - you can verify this by pasting into MSPaint or similar.  Furthermore, verify this behaviour by navigating to the URL from another device on your network, replacing localhost with the local IP of your computer.
 
 
-# 
+<br />
+<br />
 
 # Making Custom Landing Sites
 ## Directory Structure
 You can create as many landing sites as you want, providing you use an appropriate directory structure.  Create a new directory in the Landing Site location - this acts as your container.  You can either directly place resources such as HTML here or you can create further subdirectories.  For example, if you want to create multiple panels, you can create a structure that looks like "Landing\BobsPanels\Panel_1" and "Landing\BobsPanels\Panel_2" (These would be accessed by requesting /BobsPanels/Panel_1/ and /BobsPanels/Panel_2/ in the URL.
+
+<br />
 
 ## Create the Landing Site
 To create the landing site, add a new .html file - ideally, it should have the same name as the directory it resides in i.e. "Landing\BobsPanels\Panel_1\Panel_1.html".  If another name is used i.e. index.html, the html page must be requested directly in the URL i.e. "/BobsPanels/Panel_1/index.html".
@@ -110,14 +120,17 @@ Currently, the following resource types are supported:
 
 When you want to include a resource such as CSS stylesheet or images, you must use relative linking.  For example, if your CSS file is in the same directory as your html file, you would use href=".\style.css".  This also applies to any form actions - unless you require any advanced behaviour, you should use ./ as your action value (Alternatively, you can specify a different landing site if you want a different site to be shown upon requesting a keypress).  
 
+<br />
+
 ## Making Keybind Requests
-You can issue a keybind request by making a GET request that contains the parameters "Command" and CommandData".  How you do this is up to you - one technique using JS is shown in the provided "Landing1" sample; by using the OnClick event and some JQuery, a GET request for a certain keybind name is sent when clicking on <div> elements.
+You can issue a keybind request by making a GET request that contains the parameters "Command" and CommandData".  How you do this is up to you - one technique using JS is shown in the provided "Landing1" sample; by using the OnClick event and some JQuery, a GET request for a certain keybind name is sent when clicking on div elements.
 
 ### Naming your Keybinds
 The name of the keybind is chosen by you and can be anything you want - each one you use needs to be added to a dictionary for you / the user the match a keyboard input to.  When naming your binds, it is advisable to be as unique as possible while making them intuative.  For example, to create an input the issues a request to raise landing gear in MS Flight Sim, choosing a name formatted like "msfs_myPlane1_gearUp" minimises the chance of conflicting with the same or similar event in another game or application.
 
 It is also suggested to provide a template keybind dictionary that lists all keybind names you've used in your landing site - this makes it much easier to both keep binds seperate and tie them to actual keyboard inputs.
 
+<br />
 
 ### JS Sample
 The following shows a very simple example of how to use / make a keybind request:
@@ -144,12 +157,13 @@ JS / HTML:
 </html>
 ```
 
+<br />
 
 ## Special Notes
 Currently, any favicon.ico requests are ignored by the server and will not be shown even if provided.
 
-#
-#
+<br />
+<br />
 
 
 # Appendix 1 - Key Press Names
