@@ -1,4 +1,4 @@
-FlapsInc,LCTRL+LMENU+LSHIFT+F
+FlapsInc,CAPITAL
 FlapsDec,LALT_F
 GearDn,G
 GearUp,LSHIFT+G

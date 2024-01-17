@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\SimpleKeybindProxy.csproj": {}
+    "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\Source\\SimpleKeybindProxy.csproj": {}
   },
   "projects": {
-    "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\SimpleKeybindProxy.csproj": {
+    "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\Source\\SimpleKeybindProxy.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\SimpleKeybindProxy.csproj",
+        "projectUniqueName": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\Source\\SimpleKeybindProxy.csproj",
         "projectName": "SimpleKeybindProxy",
-        "projectPath": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\SimpleKeybindProxy.csproj",
+        "projectPath": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\Source\\SimpleKeybindProxy.csproj",
         "packagesPath": "C:\\Users\\tbtom\\.nuget\\packages\\",
-        "outputPath": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\obj\\",
+        "outputPath": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\Source\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",

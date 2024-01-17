@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "u69sLaaYxvgV2NcRXF6sSTvV8tXQe8dw7/yDJ7iHDCZ/c6vLN8hOOyHUfRWhLdljg0IBIXRyuOlBksy1kpQ1wg==",
+  "dgSpecHash": "a4p/zxhzhOvPGJCCFL+YMQk8S1oJ6D9qBk+ergcUXJvRZ47fdTUNTMkHYidGnOOiPSeYVzO/v0lH7WtTfaJt9Q==",
   "success": true,
-  "projectFilePath": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\SimpleKeybindProxy.csproj",
+  "projectFilePath": "D:\\Libraries\\Documents\\Projects\\SimpleKeybindProxy\\Source\\SimpleKeybindProxy.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tbtom\\.nuget\\packages\\inputsimulator\\1.0.4\\inputsimulator.1.0.4.nupkg.sha512",
     "C:\\Users\\tbtom\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",

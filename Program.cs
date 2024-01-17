@@ -27,19 +27,35 @@ namespace HttpListenerExample
     {
         static async Task Main(string[] args)
         {
+
+            //Dependancy Injection
+            var services = new ServiceCollection()
+                .AddSingleton<IProgramOptionsController, ProgramOptionsController>()
+                .AddSingleton<ISimpleWebServerController, HttpServer>()
+                .AddSingleton<IKeyBindController, KeyBindController>()
+                .AddSingleton<IOutputController, OutputController>()
+                .AddLogging(configure => configure.AddSerilog());
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
+
+            ProgramOptionsController OptionsController = (ProgramOptionsController)serviceProvider.GetService(typeof(IProgramOptionsController));
+            OptionsController.ProgramOptions = new ProgramOptions() { EnvironmentName = "debug" };
+            await OptionsController.LoadProgramOptionsAsync();
+
+
             // Command Line Args
-            ProgramOptions options = new ProgramOptions();
             CommandArgsController argsController = new CommandArgsController();
             var envName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "";
-            await argsController.SetProgramOptionsAsync(options, envName);
+            await argsController.SetProgramOptionsAsync(OptionsController.ProgramOptions, envName);
             await argsController.BuildRootCommandAsync();
             await argsController.ProcessArgumentsAsync(args);
 
+            //TODO: Implement global socket monitor
+
             // Logging
-            if (options.VerbosityLevel > 1)
+            if (OptionsController.ProgramOptions.VerbosityLevel > 1)
             {
                 Log.Logger = new LoggerConfiguration()
-                    .WriteTo.File(options.Logfile, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                    .WriteTo.File(OptionsController.ProgramOptions.Logfile, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Verbose()
                     .CreateLogger();
             }
@@ -47,42 +63,45 @@ namespace HttpListenerExample
             {
                 Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Information()
-                    .WriteTo.File(options.Logfile, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                    .WriteTo.File(OptionsController.ProgramOptions.Logfile, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .CreateLogger();
             }
-
-            //Dependancy Injection
-            var services = new ServiceCollection()
-                .AddTransient<ISimpleWebServerController, HttpServer>()
-                .AddTransient<IKeyBindController, KeyBindController>()
-                .AddLogging(configure => configure.AddSerilog());
-            IServiceProvider serviceProvider = services.BuildServiceProvider();
 
             //Get Logger
             var logger = serviceProvider.GetService<ILogger<Program>>();
 
-            // Set a properly built server address string
-            options.ServerAddess = $"http://{options.Ip}:{options.Port}/";
+
+            // Configure output for Console
+            OutputController outputController = (OutputController)serviceProvider.GetService(typeof(IOutputController));
+            Action<string> consoleOutput = delegate (string msg)
+            {
+                Console.WriteLine(msg);
+            };
+            Action<string> logOutput = delegate (string msg)
+            {
+                logger.LogInformation(msg);
+            };
+
+            outputController.RegisterStandardOutputProvider(consoleOutput);
+            outputController.RegisterStandardOutputProvider(logOutput);
+
 
             // Initiate Keybind Controller
             KeyBindController bindController = (KeyBindController)serviceProvider.GetService(typeof(IKeyBindController));
-            bindController.SetBindLibraryLocation(options.BindLocation);
-            bindController.SetProgramOptions(options);
+            bindController.SetProgramOptions();
             if (!await bindController.LoadKeyBindLibraryAsync())
             {
                 // If we can't load any Keybinds then there is currently no other function the program serves - terminate.
-                Console.WriteLine($"Could not load any Keybind dictionaries at {options.BindLocation}");
+                Console.WriteLine($"Could not load any Keybind dictionaries at {OptionsController.ProgramOptions.BindLocation}");
                 return;
             }
-            else
-            {
-                Console.WriteLine("Bind Libarary loaded successfully.  {0} total binds found.", bindController.GetBindLibraryCount());
-            }
+
 
             // Configure Web Server
             HttpServer httpServer = (HttpServer)serviceProvider.GetService(typeof(ISimpleWebServerController));
-            httpServer.SetProgramOptions(options);
-            httpServer.Listener.Prefixes.Add(options.ServerAddess);
+            httpServer.SetProgramOptions(OptionsController.ProgramOptions);
+            httpServer.BindController = bindController;
+            httpServer.Listener.Prefixes.Add(OptionsController.ServerAddress);
             try
             {
                 httpServer.Listener.Start();
@@ -104,8 +123,8 @@ namespace HttpListenerExample
             // Register landing sites
             if (!await httpServer.RegisterLandingSitesAsync())
             {
-                Console.WriteLine($"Could not find any Landing sites to display at {options.BindLocation}");
-                if (options.IgnoreMissingLanding)
+                Console.WriteLine($"Could not find any Landing sites to display at {OptionsController.ProgramOptions.BindLocation}");
+                if (OptionsController.ProgramOptions.IgnoreMissingLanding)
                 {
                     logger.LogDebug($"Ignoring missing Landing Site(s)");
                 }
@@ -116,10 +135,10 @@ namespace HttpListenerExample
             }
 
             // Console Output - show all IP's this can be accessed on:
-            if (!options.ServerAddess.Contains("*"))
+            if (!OptionsController.ServerAddress.Contains("*"))
             {
-                logger.LogDebug($"SimpleKeybindProxy is attempting to start at http://{options.Ip}:{options.Port}/");
-                Console.WriteLine($"SimpleKeybindProxy is attempting to start at http://{options.Ip}:{options.Port}/");
+                logger.LogDebug($"SimpleKeybindProxy is attempting to start at http://{OptionsController.ProgramOptions.Ip}:{OptionsController.ProgramOptions.Port}/");
+                Console.WriteLine($"SimpleKeybindProxy is attempting to start at http://{OptionsController.ProgramOptions.Ip}:{OptionsController.ProgramOptions.Port}/");
             }
             else
             {
@@ -129,13 +148,13 @@ namespace HttpListenerExample
                 if (addr.Any())
                 {
                     Console.WriteLine("SimpleKeybindProxy can be accessed at the following addresses:");
-                    Console.WriteLine($"http://localhost:{options.Port}/");
-                    Console.WriteLine($"http://127.0.0.1:{options.Port}/");
+                    Console.WriteLine($"http://localhost:{OptionsController.ProgramOptions.Port}/");
+                    Console.WriteLine($"http://127.0.0.1:{OptionsController.ProgramOptions.Port}/");
                     foreach (IPAddress add in addr)
                     {
                         if (add.ToString().Contains(":") == false)
                         {
-                            Console.WriteLine($"http://{add}:{options.Port}/");
+                            Console.WriteLine($"http://{add}:{OptionsController.ProgramOptions.Port}/");
                         }
                     }
                 }
@@ -151,7 +170,7 @@ namespace HttpListenerExample
                 Console.WriteLine("The following Landing Sites were detected:");
                 foreach (string site in LandingSites)
                 {
-                    Console.WriteLine($"> {options.ServerAddess.Replace("*", "localhost")}{site.Split("\\").Last()}/");
+                    Console.WriteLine($"> {OptionsController.ServerAddress.Replace("*", "localhost")}{site.Split("\\").Last()}/");
                 }
             }
 
@@ -159,19 +178,26 @@ namespace HttpListenerExample
             Console.WriteLine($"---------------------------------------");
             Console.WriteLine($"Awaiting Requests");
             Console.WriteLine($"---------------------------------------");
-            logger.LogInformation($"SimpleKeybindProxy is starting at http://{options.Ip}:{options.Port}/");
+            logger.LogInformation($"SimpleKeybindProxy is starting at http://{OptionsController.ProgramOptions.Ip}:{OptionsController.ProgramOptions.Port}/");
 
 
 
-            // Start Request Handler
-            await Task.Factory.StartNew(httpServer.HandleIncomingConnectionsAsync);
-
+            // Start server and handle continuous running
             bool Running = true;
+
+            // Start Web Server
+            await Task.Factory.StartNew(httpServer.StartContext);
+
+            // Start Socket Monitor after short delay
+            await Task.Delay(500);
+            //await Task.Factory.StartNew(httpServer.ProcessWebSocketConnectionAsync);
+
             while (Running)
             {
+
                 Console.Write("> ");
                 string input = Console.ReadLine();
-                await ProcessRunningArgs(input.Split(" "), options, bindController);
+                await ProcessRunningArgs(input.Split(" "), bindController, httpServer, OptionsController);
                 if (!string.IsNullOrEmpty(input) && input.ToLower().Equals("exit"))
                 {
                     Running = false;
@@ -179,11 +205,12 @@ namespace HttpListenerExample
             }
 
             // Close the listener
+            await httpServer.CloseWebSocketConnectionAsync(Address: "*");
             httpServer.Listener.Close();
         }
 
 
-        static async Task ProcessRunningArgs(string[] args, ProgramOptions options, KeyBindController bindController)
+        static async Task ProcessRunningArgs(string[] args, KeyBindController bindController, HttpServer httpServer, ProgramOptionsController OptionsController)
         {
             if (args.Length == 0)
             {
@@ -198,7 +225,7 @@ namespace HttpListenerExample
                     if (!string.IsNullOrEmpty(args[1]))
                     {
                         int Verblevel = Int32.Parse(args[1]);
-                        options.VerbosityLevel = Verblevel;
+                        OptionsController.ProgramOptions.VerbosityLevel = Verblevel;
                         Console.WriteLine("Verbosity Level Changed to {0}", Verblevel);
                     }
                 }
@@ -224,17 +251,70 @@ namespace HttpListenerExample
                 Console.WriteLine("");
                 break;
 
+                case "socketsend":
+                if (!string.IsNullOrEmpty(args[1]))
+                {
+                    string textToSend = "";
+                    ConnectedWebSocket? connectedWebSocket = null;
+                    if (args[1].StartsWith("-a"))
+                    {
+                        if (!string.IsNullOrEmpty(args[2]))
+                        {
+                            connectedWebSocket = httpServer.GetConnectedWebSocket(Address: args[2]);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Syntax error");
+                        }
+
+                        textToSend = string.Join(" ", args.TakeLast(args.Length - 3));
+                    }
+                    else if (args[1].StartsWith("-i"))
+                    {
+                        if (!string.IsNullOrEmpty(args[2]))
+                        {
+                            connectedWebSocket = httpServer.GetConnectedWebSocket(Id: args[2]);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Syntax error");
+                        }
+
+                        textToSend = string.Join(" ", args.TakeLast(args.Length - 3));
+                    }
+                    else
+                    {
+                        textToSend = string.Join(" ", args.TakeLast(args.Length - 2));
+                    }
+
+
+                    if (await httpServer.SendDataOverSocketAsync(textToSend, ConnectedSocket: connectedWebSocket))
+                    {
+                        Console.WriteLine("Text sent over websocket");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Websocket not active / could not sent data");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Syntax error");
+                }
+                Console.WriteLine("");
+                break;
+
                 case "ignore":
                 if (!string.IsNullOrEmpty(args[1]))
                 {
                     if (args[1].Equals("1") || args[1].ToLower().Equals("y"))
                     {
-                        options.IgnoreMissingLanding = true;
+                        OptionsController.ProgramOptions.IgnoreMissingLanding = true;
                         Console.WriteLine("Ignore Missing Landing Sites enabled");
                     }
                     else if (args[1].Equals("0") || args[1].ToLower().Equals("n"))
                     {
-                        options.IgnoreMissingLanding = false;
+                        OptionsController.ProgramOptions.IgnoreMissingLanding = false;
                         Console.WriteLine("Ignore Missing Landing Sites disabled");
                     }
                     else
@@ -246,16 +326,16 @@ namespace HttpListenerExample
                 break;
 
                 case "noissue":
-                if (!string.IsNullOrEmpty(args[1]))
+                if (args.Length > 1 && !string.IsNullOrEmpty(args[1]))
                 {
                     if (args[1].Equals("1") || args[1].ToLower().Equals("y"))
                     {
-                        options.IgnoreMissingLanding = true;
+                        OptionsController.ProgramOptions.PreventBindIssue = true;
                         Console.WriteLine("Keypresses will no longer be issued");
                     }
                     else if (args[1].Equals("0") || args[1].ToLower().Equals("n"))
                     {
-                        options.IgnoreMissingLanding = false;
+                        OptionsController.ProgramOptions.PreventBindIssue = false;
                         Console.WriteLine("Keypresses will be issued");
                     }
                     else

@@ -8,7 +8,6 @@ namespace SimpleKeybindProxy.Controllers
     {
         public ProgramOptions ProgramOptions { get; set; }
         public Command ReadCommand { get; set; }
-        public string EnvironmentName { get; set; }
 
 
         public CommandArgsController()
@@ -23,7 +22,7 @@ namespace SimpleKeybindProxy.Controllers
             {
                 ProgramOptions = programOptions;
             }
-            EnvironmentName = environmentName;
+            ProgramOptions.EnvironmentName = environmentName;
         }
 
 
@@ -106,22 +105,32 @@ namespace SimpleKeybindProxy.Controllers
                     await SetLandingSiteAsync(landingDir);
                     await SetBindingSiteAsync(bindDir);
 
-                    if (string.IsNullOrEmpty(ip))
+                    if (!string.IsNullOrEmpty(ip))
                     {
-                        ProgramOptions.Ip = "*";
-                    }
-                    else
-                    {
-                        ProgramOptions.Ip = ip;
+                        if (ValidateIPv4(ip))
+                        {
+                            ProgramOptions.Ip = ip;
+                        }
+                        else
+                        {
+                            Console.WriteLine("-a {0} is not a valid address", ip);
+                        }
                     }
 
-                    if (string.IsNullOrEmpty(port))
+
+                    if (!string.IsNullOrEmpty(port))
                     {
-                        ProgramOptions.Port = "8001";
+                        if (Int32.TryParse(port, out _) && Int32.Parse(port) >= 0 && Int32.Parse(port) <= 65535)
+                        {
+                            ProgramOptions.Port = port;
+                        }
+                        else
+                        {
+                            Console.WriteLine("-p {0} is not a valid port", port);
+                        }
                     }
                     else
                     {
-                        ProgramOptions.Port = port;
                     }
 
                     await SetVerbosityLevel(verbLevel);
@@ -146,89 +155,55 @@ namespace SimpleKeybindProxy.Controllers
 
         public async Task SetLandingSiteAsync(string landingSite)
         {
-            string holdLoc = "";
-            if (string.IsNullOrEmpty(landingSite))
+            if (!string.IsNullOrEmpty(landingSite))
             {
-                if (EnvironmentName.Equals("Development"))
+                try
                 {
-                    //ProgramOptions.LandingDir = "..\\..\\..\\Landing";
-                    holdLoc = "..\\..\\..\\Landing";
+                    if (Directory.Exists(landingSite))
+                    {
+                        ProgramOptions.LandingDir = landingSite;
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(landingSite);
+                        Console.WriteLine("Landing Site Directory Created");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    holdLoc = ".\\Landing";
-                    //ProgramOptions.LandingDir = ".\\Landing";
+                    Console.WriteLine("Landing Directory could not be found / Accessed!");
+                    return;
                 }
-            }
-            else
-            {
-                //ProgramOptions.LandingDir = landingSite;
-                holdLoc = landingSite;
-            }
-
-            try
-            {
-                if (Directory.Exists(holdLoc))
-                {
-                    ProgramOptions.LandingDir = holdLoc;
-                }
-                else
-                {
-                    Directory.CreateDirectory(holdLoc);
-                    Console.WriteLine("Landing Site Directory Created");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Landing Directory could not be found / Accessed!");
-                return;
             }
         }
 
         public async Task SetBindingSiteAsync(string BindSite)
         {
-            string holdLoc = "";
-            if (string.IsNullOrEmpty(BindSite))
+            if (!string.IsNullOrEmpty(BindSite))
             {
-                if (EnvironmentName.Equals("Development"))
+                try
                 {
-                    //ProgramOptions.BindLocation = "..\\..\\..\\Binds\\";
-                    holdLoc = "..\\..\\..\\Binds\\";
+                    if (Directory.Exists(BindSite))
+                    {
+                        ProgramOptions.BindLocation = BindSite;
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(BindSite);
+                        Console.WriteLine("Bind file Directory Created");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    //ProgramOptions.BindLocation = ".\\Binds\\";
-                    holdLoc = ".\\Binds\\";
+                    Console.WriteLine("Bind Directory could not be found / Accessed!");
+                    return;
                 }
-            }
-            else
-            {
-                //ProgramOptions.BindLocation = BindSite;
-                holdLoc = BindSite;
             }
 
-            try
-            {
-                if (Directory.Exists(holdLoc))
-                {
-                    ProgramOptions.BindLocation = holdLoc;
-                }
-                else
-                {
-                    Directory.CreateDirectory(holdLoc);
-                    Console.WriteLine("Bind file Directory Created");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Bind Directory could not be found / Accessed!");
-                return;
-            }
         }
 
         public async Task SetVerbosityLevel(string verbLevel)
         {
-            ProgramOptions.VerbosityLevel = 1;
             if (!string.IsNullOrEmpty(verbLevel))
             {
                 try
@@ -243,61 +218,49 @@ namespace SimpleKeybindProxy.Controllers
             }
         }
 
+
         public async Task SetLogFile(string LogDirectory)
         {
-            string holdLoc = "";
-            if (string.IsNullOrEmpty(LogDirectory))
+            if (!string.IsNullOrEmpty(LogDirectory))
             {
-                if (EnvironmentName.Equals("Development"))
+                try
                 {
-                    holdLoc = "..\\..\\..\\Logs\\";
-                }
-                else
-                {
-                    holdLoc = ".\\Logs\\";
-                }
-            }
-            else
-            {
-                holdLoc = LogDirectory;
-            }
-
-            try
-            {
-                if (Directory.Exists(holdLoc))
-                {
-                    string logFile = holdLoc + "Log.txt";
-                    if (File.Exists(logFile))
+                    if (Directory.Exists(LogDirectory))
                     {
-                        var creationDatetime = File.GetCreationTimeUtc(logFile);
-                        var ExpiredDatetime = creationDatetime.AddDays(1);
-
-                        if (ExpiredDatetime < DateTime.UtcNow)
-                        {
-                            // log file older than 24 hours, rename and create a new one
-                            var CreationTime = File.GetCreationTimeUtc(logFile);
-                            string oldLogFileName = holdLoc + $"Log_{CreationTime.ToString("ddMMyy_HHmm")}.txt";
-                            if (File.Exists(oldLogFileName))
-                            {
-                                File.Move(oldLogFileName, oldLogFileName + ".bac");
-                            }
-                            File.Move(logFile, oldLogFileName);
-                        }
+                        string logFile = LogDirectory + "Log.txt";
+                        ProgramOptions.Logfile = LogDirectory + "Log.txt";
                     }
-
-                    ProgramOptions.Logfile = holdLoc + "Log.txt";
+                    else
+                    {
+                        Directory.CreateDirectory(LogDirectory);
+                        Console.WriteLine("Log file Directory Created");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Directory.CreateDirectory(holdLoc);
-                    Console.WriteLine("Log file Directory Created");
+                    Console.WriteLine("Log file Directory could not be found / Accessed!");
+                    return;
                 }
             }
-            catch (Exception ex)
+        }
+
+
+
+        public bool ValidateIPv4(string ipString)
+        {
+            if (String.IsNullOrWhiteSpace(ipString))
             {
-                Console.WriteLine("Log file Directory could not be found / Accessed!");
-                return;
+                return false;
             }
+
+            string[] ipSplit = ipString.Split('.');
+            if (ipSplit.Length != 4)
+            {
+                return false;
+            }
+
+            byte toParse;
+            return ipSplit.All(r => byte.TryParse(r, out toParse));
         }
     }
 }

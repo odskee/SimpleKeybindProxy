@@ -1,59 +1,81 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-	<title>Simple Keybind Proxy</title>
-	<link rel="stylesheet" href=".\style.css" type="text/css">
+	<title>Simple Keybind Proxy Test</title>
+	<link rel="stylesheet" type="text/css" href="./style.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body>
+	<header>
+		<h1>Sample Simple CSS Test layout for buttons</h1>
+	</header>
+	<main>
+		<div onclick="TestSocket()">Test Web Socket</div>
+		<div onclick="IssueBind('FlapsDec')">Flaps Down</div>
+		<div onclick="IssueBind('GearUp')">Raise Gear</div>
+		<div onclick="IssueBind('GearDn')">Lower Gear</div>
+		<div class="big" onclick="IssueBind('eject')">EJECT</div>
+		<div onclick="IssueBind('Test')">Test</div>
+		<div><img onclick="IssueBind('OpenMap')" src="./button.png" /></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div class="extrabig"></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+		<div></div>
+	</main>
 
-	<script>
+	<script type="text/javascript">
+		const socket = new WebSocket("ws://127.0.0.1:8001");
+		const sendMsg = {
+			Command: "Keybind_Press",
+			CommandData: ["FlapsInc"]
+		};
+
+		socket.addEventListener("message", (event) => {
+			console.log("Message from server ", event.data);
+		});
+		socket.addEventListener("error", (event) => {
+			console.log("WebSocket error: ", event);
+		});
+		socket.addEventListener("close", (event) => {
+			console.log("The connection has been closed successfully.");
+		})
 		function IssueBind(bindName) {
 			$.get("./", { Command: "KeyBind_Press", CommandData: bindName });
 		}
+
+		function TestSocket() {
+			console.log("Sending Data");
+			console.log(socket.readyState);
+
+			socket.send(JSON.stringify(sendMsg));
+		}
 	</script>
-</head>
-    <body>
-        <header>
-            <h1>Sample Simple CSS layout for buttons</h1>
-        </header>
-		<main>
-			<div onclick="IssueBind('FlapsInc')">Flaps Up</div>
-			<div onclick="IssueBind('FlapsDec')">Flaps Down</div>
-			<div onclick="IssueBind('GearUp')">Raise Gear</div>
-			<div onclick="IssueBind('GearDn')">Lower Gear</div>
-			<div class="big" onclick="IssueBind('eject')">EJECT</div>
-			<div onclick="IssueBind('Test')">Test</div>
-			<div ><img onclick="IssueBind('OpenMap')" src=".\button.png" /></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div class="extrabig"></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-		</main>
-    </body>
+</body>
 </html>
