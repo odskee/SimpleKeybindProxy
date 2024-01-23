@@ -1,0 +1,23 @@
+2024-01-14 17:40:39 [DBG] Keybind directory found: ..\..\..\Binds\
+2024-01-14 17:40:39 [DBG] Keybind Mapping Detected: FlapsInc maps to LCONTROL+LMENU+LSHIFT+VK_B
+2024-01-14 17:40:39 [DBG] Keybind Mapping Detected: FlapsDec maps to LALT_F
+2024-01-14 17:40:39 [DBG] Keybind Mapping Detected: GearDn maps to G
+2024-01-14 17:40:39 [DBG] Keybind Mapping Detected: GearUp maps to LSHIFT+G
+2024-01-14 17:40:39 [DBG] Keybind Mapping Detected: Test maps to LCONTROL+LMENU+VK_A
+2024-01-14 17:40:39 [DBG] Keybind Mapping Detected: OpenMap maps to VK_M
+2024-01-14 17:40:39 [INF] Bind Libarary loaded successfully.  6 total binds found.
+2024-01-14 17:40:39 [DBG] Landing Directory Added: ..\..\..\Landing\Landing1
+2024-01-14 17:40:39 [DBG] Landing Directory Added: ..\..\..\Landing\MyCustomUFCPanel
+2024-01-14 17:40:39 [INF] All Landing Sites Registered
+2024-01-14 17:40:39 [INF] SimpleKeybindProxy is starting at http://*:8001/
+2024-01-14 17:40:39 [INF] Web Socket Connection(s): 1
+2024-01-14 17:40:56 [INF] Resource Requested: /Landing1/ by 127.0.0.1:14457
+2024-01-14 17:40:56 [DBG] File found and contents read: ../../../Landing/Landing1/Landing1.html
+2024-01-14 17:40:56 [INF] Resource Requested: /Landing1/style.css by 127.0.0.1:14457
+2024-01-14 17:40:56 [DBG] File found and contents read: ../../../Landing/Landing1/style.css
+2024-01-14 17:40:56 [INF] Resource Requested: /Landing1/jquery.simple.websocket.js by 127.0.0.1:14458
+2024-01-14 17:40:56 [DBG] File found and contents read: ../../../Landing/Landing1/jquery.simple.websocket.js
+2024-01-14 17:40:56 [INF] Resource Requested: /Landing1/button.png by 127.0.0.1:14457
+2024-01-14 17:40:56 [DBG] File found and contents read: ../../../Landing/Landing1/button.png
+2024-01-14 17:40:56 [INF] Web Socket Connection(s): 2
+2024-01-14 17:40:58 [INF] KeyBind FlapsInc Initiated: LCONTROL+LMENU+LSHIFT+VK_B

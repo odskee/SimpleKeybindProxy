@@ -12,6 +12,7 @@
         public bool PreventBindIssue { get; set; }
         public string EnvironmentName { get; set; }
         public int MaxSocketConnections { get; set; }
+        public bool AllowDeveloperId { get; set; }
 
     }
 }

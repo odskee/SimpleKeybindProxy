@@ -1,32 +1,36 @@
 ﻿using Microsoft.Extensions.Logging;
-using SimpleKeybindProxy.Controllers;
+using SimpleKeybindProxy.Controllers.Helpers;
 using SimpleKeybindProxy.Interfaces;
 using SimpleKeybindProxy.Models;
-using SimpleKeybindProxy.Models.SocketRequest;
 using SimpleKeybindProxy.Models.SocketResponse;
+using System.Buffers;
+using System.Collections.Specialized;
 using System.Net;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 
-namespace Controllers.SimpleWebService
+namespace SimpleKeybindProxy.Controllers
 {
-    public partial class HttpServer
+    public partial class SimpleWebServerController
     {
         public partial Task<bool> RegisterLandingSitesAsync();
         public partial Task StartContext();
         public partial Task HandleIncomingConnectionsAsync(HttpListenerContext CTX);
-        public partial Task<ServerCommandResponse> ProcessCommandRequestAsync(CommandRequest commandRequest);
-        public partial Task<bool> SendDataOverSocketAsync(string TextToSend, string Address = "", ConnectedWebSocket? ConnectedSocket = null);
-        public partial Task<bool> CloseWebSocketConnectionAsync(string Id = "", string Address = "", string Reason = "");
+        public partial Task<ServerCommandResponse> ProcessCommandRequestAsync(object commandRequest);
+        public partial Task<bool> SendDataOverSocketAsync(string ToSend, string Address);
+        public partial Task<bool> SendDataOverSocketAsync(string ToSend, ConnectedWebSocket ConnectedSocket);
+        public partial Task<int> CloseWebSocketConnectionAsync(string Id = "", string Address = "", string Reason = "");
         public partial Task<bool> SetPageDataOnRequestAsync(string RequestedLandingSiteResource);
-        public partial ConnectedWebSocket? GetConnectedWebSocket(string Address = "", string Id = "");
+        public partial List<ConnectedWebSocket>? GetConnectedWebSockets(string Address = "", string Id = "", string RegisteredName = "");
         public partial Task RegisterNewSocketConnectionAsync(ConnectedWebSocket NewSocket);
         public partial bool CanMakeNewSocketConnection();
         public partial List<string> GetListOfLandingSites();
     }
 
-    public partial class HttpServer : ISimpleWebServerController
+    public partial class SimpleWebServerController : ISimpleWebServerController
     {
         public HttpListener Listener { get; set; }
         public string PageData;
@@ -45,8 +49,8 @@ namespace Controllers.SimpleWebService
 
         //// Web Socket
         private ICollection<ConnectedWebSocket> ConnectedWebSocketList { get; set; }
-        private const int receiveChunkSize = 256;
-        private const int sendChunkSize = 256;
+        private const int receiveChunkSize = 512;
+        private const int sendChunkSize = 512;
         private int RequestCount = 0;
 
 
@@ -57,7 +61,7 @@ namespace Controllers.SimpleWebService
 
 
         // Constructor
-        public HttpServer(ILogger<HttpServer> _logger, IKeyBindController keybindController, IProgramOptionsController _programOptionsController, IOutputController _outputController)
+        public SimpleWebServerController(ILogger<SimpleWebServerController> _logger, IKeyBindController keybindController, IProgramOptionsController _programOptionsController, IOutputController _outputController)
         {
             Listener = new HttpListener();
             BindController = keybindController;
@@ -155,7 +159,7 @@ namespace Controllers.SimpleWebService
 
                 if (HttpRequest != null)
                 {
-                    // Bypass / refuse any favicon requests
+                    // Bypass / refuse any favicon requests because I'm lazy and don't want to work out landing sites from browser request URLs.
                     if (HttpRequest.Url.AbsolutePath.Contains("favicon"))
                     {
                         HttpResponse.StatusCode = 404;
@@ -239,7 +243,6 @@ namespace Controllers.SimpleWebService
                         {
                             OutputController.StandardOutput("General Error, see Log for more information");
                             logger.LogCritical(1, ex, "General Error");
-                            //HttpResponse.StatusCode = 500;
                         }
                         PageDataSet = false;
 
@@ -273,12 +276,9 @@ namespace Controllers.SimpleWebService
             {
                 if (HttpRequest != null && HttpRequest.IsWebSocketRequest)
                 {
+                    OutputController.StandardOutput("Upgrading to web socket");
                     try
                     {
-                        if (HttpRequest.HttpMethod == null)
-                        {
-                            OutputController.StandardOutput("HttpMethod Null!");
-                        }
                         if (!CanMakeNewSocketConnection())
                         {
                             OutputController.StandardOutput("Max number of socket connections reached");
@@ -289,14 +289,16 @@ namespace Controllers.SimpleWebService
                         webSocketContext = await CTX.AcceptWebSocketAsync(subProtocol: null, receiveChunkSize, TimeSpan.FromSeconds(15));
                         webSocket = webSocketContext.WebSocket;
 
-                        // add to socket list
-                        string socketId = Guid.NewGuid().ToString();
-                        connectedWebSocket = new ConnectedWebSocket() { SocketContext = webSocketContext, Id = socketId, Address = CTX.Request.RemoteEndPoint.ToString(), EndPoint = CTX.Request.RemoteEndPoint };
+
+                        // Connected - add to socket list
+                        Interlocked.Increment(ref RequestCount);
+                        connectedWebSocket = new ConnectedWebSocket() { SocketContext = webSocketContext, Id = Guid.NewGuid().ToString(), Address = CTX.Request.RemoteEndPoint.ToString(), EndPoint = CTX.Request.RemoteEndPoint };
                         await RegisterNewSocketConnectionAsync(connectedWebSocket);
+                        OutputController.StandardOutput("Web Socket Connection(s): {0}", RequestCount);
 
 
                         // Say Hello
-                        SocketConnectedResponse socketConnectedResponse = new SocketConnectedResponse() { Id = socketId, Message = "Server Says Hello" };
+                        SocketConnectedResponse socketConnectedResponse = new SocketConnectedResponse() { Id = connectedWebSocket.Id, Message = "Server Says Hello" };
                         await SendDataOverSocketAsync(JsonSerializer.Serialize<SocketConnectedResponse>(socketConnectedResponse), ConnectedSocket: connectedWebSocket);
 
                     }
@@ -305,14 +307,6 @@ namespace Controllers.SimpleWebService
                         OutputController.StandardOutput(ex, ex.Message);
                         logger.LogCritical(1, ex, "");
                     }
-
-                    OutputController.StandardOutput("Upgrading to web socket");
-
-                    // Connected
-                    Interlocked.Increment(ref RequestCount);
-                    OutputController.StandardOutput("Web Socket Connection(s): {0}", RequestCount);
-
-
 
                     try
                     {
@@ -331,47 +325,76 @@ namespace Controllers.SimpleWebService
                             {
                                 await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
                                 HttpResponse.Close();
-                                //break;
+                                ConnectedWebSocketList.Remove(connectedWebSocket);
                             }
                             else
                             {
                                 // Start conversation.
-                                var dr = System.Text.Encoding.Default.GetString(arrayBuffer);
+                                var dr = Encoding.Default.GetString(arrayBuffer);
                                 string dataReceived = dr.Replace("\0", string.Empty);
                                 OutputController.StandardOutput("Received Data: " + dataReceived);
-                                CommandRequest? reqData = new CommandRequest();
+                                object? reqData = new object();
 
                                 if (!string.IsNullOrEmpty(dataReceived))
                                 {
-                                    if (dataReceived.Contains("SocketTest"))
-                                    {
-                                        await SendDataOverSocketAsync("Socket Test Successful", ConnectedSocket: connectedWebSocket);
-                                    }
-                                    else
-                                    {
-                                        reqData = JsonSerializer.Deserialize<CommandRequest>(dataReceived);
-                                        if (reqData != null)
-                                        {
-                                            ServerCommandResponse commandResponse = await ProcessCommandRequestAsync(reqData);
+                                    // Need to empty receive buffer to hold next possible request
+                                    receiveBuffer = new byte[receiveChunkSize];
 
+
+                                    reqData = JsonSerializer.Deserialize<object>(dataReceived)?.FromJson();
+
+                                    // Provided ID and requester match
+                                    if (reqData != null)
+                                    {
+                                        string requesterID = reqData?.GetType().GetProperty("Id")?.GetValue(reqData)?.ToString() ?? "";
+                                        if ((!string.IsNullOrEmpty(requesterID) && requesterID.Equals(connectedWebSocket.Id)) || (ProgramOptions.ProgramOptions.AllowDeveloperId && requesterID.Equals("developer")))
+                                        {
+                                            // Provided ID and requester match
+                                            /// If a registered name exists, set / overwrite with correct value
+                                            if (!requesterID.Equals("developer"))
+                                            {
+                                                reqData?.GetType().GetProperty("RequesterName").SetValue(reqData, ConnectedWebSocketList.First(a => a.Id == requesterID).RegisteredName ?? "");
+                                            }
+
+                                            ServerCommandResponse commandResponse = await ProcessCommandRequestAsync(reqData);
+                                            string toJson = "";
                                             if (commandResponse.Command != null)
                                             {
-                                                try
-                                                {
-                                                    string toJson = JsonSerializer.Serialize<ServerCommandResponse>(commandResponse);
-                                                    if (!string.IsNullOrEmpty(toJson))
-                                                    {
-                                                        await SendDataOverSocketAsync(toJson, ConnectedSocket: connectedWebSocket);
-                                                    }
+                                                toJson = JsonSerializer.Serialize<ServerCommandResponse>(commandResponse);
+                                            }
+                                            else
+                                            {
+                                                commandResponse.Id = connectedWebSocket.Id;
+                                                commandResponse.Command = reqData;
+                                                commandResponse.CommandSuccess = false;
+                                                commandResponse.CommandResponse = null;
+                                                commandResponse.Message = "Unknown command / Syntax error";
+                                                toJson = JsonSerializer.Serialize<ServerCommandResponse>(commandResponse);
+                                            }
 
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    OutputController.StandardOutput("Something went wrong responding through web socket");
-                                                    logger.LogCritical(1, ex, "Error in ProcessWebSocketConnectionAsync");
-                                                    return false;
-                                                }
 
+                                            try
+                                            {
+                                                if (!string.IsNullOrEmpty(toJson))
+                                                {
+                                                    await SendDataOverSocketAsync(toJson, ConnectedSocket: connectedWebSocket);
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                OutputController.StandardOutput("Something went wrong responding through web socket");
+                                                logger.LogCritical(1, ex, "Error in ProcessWebSocketConnectionAsync");
+                                                return false;
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            ServerCommandResponse serverCommandResponse = new ServerCommandResponse() { Id = connectedWebSocket.Id, Command = reqData, CommandSuccess = false, Message = "Provided ID does not match the request origin" };
+                                            string toJson = JsonSerializer.Serialize<ServerCommandResponse>(serverCommandResponse);
+                                            if (!string.IsNullOrEmpty(toJson))
+                                            {
+                                                await SendDataOverSocketAsync(toJson, ConnectedSocket: connectedWebSocket);
                                             }
                                         }
                                     }
@@ -393,16 +416,21 @@ namespace Controllers.SimpleWebService
 
 
         // Sends the specified JSON over an active web socket connection
-        public partial async Task<bool> SendDataOverSocketAsync(string TextToSend, string Address = "", ConnectedWebSocket? ConnectedSocket = null)
+        public partial async Task<bool> SendDataOverSocketAsync(string ToSend, string Address = "")
         {
+
+            ConnectedWebSocket? ConnectedSocket = ConnectedWebSocketList.FirstOrDefault(a => a.Address.Equals(Address));
             if (ConnectedSocket == null)
             {
-                if (string.IsNullOrEmpty(Address))
-                    return false;
-
-                ConnectedSocket = ConnectedWebSocketList.First(a => a.Address.Equals(Address));
+                return false;
             }
-            if (ConnectedSocket != null && ConnectedSocket.SocketContext.WebSocket != null)
+
+            return await SendDataOverSocketAsync(ToSend, ConnectedSocket);
+        }
+
+        public partial async Task<bool> SendDataOverSocketAsync(string ToSend, ConnectedWebSocket ConnectedSocket)
+        {
+            if (ConnectedSocket != null && ConnectedSocket.SocketContext.WebSocket != null && ToSend != null)
             {
                 WebSocket webSocket = ConnectedSocket.SocketContext.WebSocket;
 
@@ -412,23 +440,19 @@ namespace Controllers.SimpleWebService
                     ICollection<SocketResponseChunk> responseChunks = new List<SocketResponseChunk>();
                     int IdStart = 1;
 
-                    int TextToSendLength = TextToSend.Length;
-
-
-
-                    int TotalChunks = (TextToSend.Length / sendChunkSize) + ((TextToSend.Length % sendChunkSize) - ((TextToSend.Length % sendChunkSize) - 1));
+                    int TextToSendLength = ToSend.Length;
+                    int TotalChunks = (TextToSendLength / sendChunkSize) + ((TextToSendLength % sendChunkSize) - ((TextToSendLength % sendChunkSize) - 1));
                     int StartPosition = 0;
                     int CharCount = sendChunkSize;
 
                     for (int i = 1; i <= TotalChunks; i++)
                     {
-                        TextToSendLength = TextToSend.Length;
                         if (sendChunkSize * i > TextToSendLength)
                         {
                             CharCount = TextToSendLength - (sendChunkSize * (i - 1));
                         }
 
-                        responseChunks.Add(new SocketResponseChunk() { ChunkValue = TextToSend.Substring(StartPosition, CharCount), Id = IdStart, TotalChunks = TotalChunks });
+                        responseChunks.Add(new SocketResponseChunk() { ChunkValue = ToSend.Substring(StartPosition, CharCount), Id = IdStart, TotalChunks = TotalChunks });
                         StartPosition += sendChunkSize;
 
                     }
@@ -461,26 +485,30 @@ namespace Controllers.SimpleWebService
                     return false;
                 }
             }
-
             return true;
         }
 
 
 
+
         // Closes and active web socket connection
-        public partial async Task<bool> CloseWebSocketConnectionAsync(string Id = "", string Address = "", string Reason = "")
+        public partial async Task<int> CloseWebSocketConnectionAsync(string Id = "", string Address = "", string Reason = "")
         {
-            ConnectedWebSocket? connectedSocket = ConnectedWebSocketList.First(a => a.Id.Equals(Id) || a.Address.Equals(Address));
-            if (connectedSocket != null)
+            IEnumerable<ConnectedWebSocket> CloseSocketList = ConnectedWebSocketList.Where(a => a.Id.Equals(Address) || Address.Equals("*"));
+            int closedConnectionCount = 0;
+            foreach (ConnectedWebSocket connectedSocket in CloseSocketList)
             {
-                if (connectedSocket.SocketContext.WebSocket != null)
+                if (connectedSocket.SocketContext.WebSocket != null && connectedSocket.SocketContext.WebSocket.State == WebSocketState.Open)
                 {
                     await connectedSocket.SocketContext.WebSocket.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, Reason, CancellationToken.None);
-                    //webSocket.Dispose();
+
+                    // Remove socket from connected socket list
+                    ConnectedWebSocketList.Remove(connectedSocket);
+                    closedConnectionCount++;
                 }
-                return true;
+
             }
-            return false;
+            return closedConnectionCount;
         }
 
 
@@ -568,44 +596,53 @@ namespace Controllers.SimpleWebService
 
 
         // Processes a Command Request
-        public partial async Task<ServerCommandResponse> ProcessCommandRequestAsync(CommandRequest commandRequest)
+        public partial async Task<ServerCommandResponse> ProcessCommandRequestAsync(object commandRequest)
         {
-            ServerCommandResponse serverResponse = new ServerCommandResponse() { Command = commandRequest };
-            if (commandRequest != null && !string.IsNullOrEmpty(commandRequest.Command))
+            ServerCommandResponse serverResponse = new ServerCommandResponse() { Command = commandRequest, Id = commandRequest.GetType().GetProperty("Id").GetValue(commandRequest)?.ToString() ?? "" };
+
+            string CommandName = commandRequest.GetType().GetProperty("Command").GetValue(commandRequest).ToString();
+            if (commandRequest != null && !string.IsNullOrEmpty(CommandName))
             {
-                if (commandRequest.Command.ToLower().Contains("keybind"))
+                MethodInfo? dMeth = this.GetType().GetMethods().FirstOrDefault(a => a.Name.ToLower().Equals($"process{CommandName.ToLower()}commandasync"));
+
+                if (dMeth != null)
                 {
-                    serverResponse.CommandSuccess = true;
-                    if (!string.IsNullOrEmpty(commandRequest?.CommandData?.FirstOrDefault()))
+                    //serverResponse.CommandResponse = dMeth.Invoke(this, new object[] { commandRequest });
+                    try
                     {
-                        KeybindResponse? kbResp = new KeybindResponse();
-                        kbResp = await BindController.ProcessKeyBindRequestAsync(commandRequest);
-
-                        if (!kbResp.Success)
+                        if (this.GetType().GetMethods().Any(a => a.Name.ToLower().Equals($"process{CommandName.ToLower()}commandasync")))
                         {
-                            // Problem occured during the keybind issue request
-                            OutputController.StandardOutput("A problem occurred trying to issue your requested keybind: {0}", commandRequest?.CommandData?.FirstOrDefault());
+                            Task? t = (Task)GetType().GetMethods().First(a => a.Name.ToLower().Equals($"process{CommandName.ToLower()}commandasync")).Invoke(this, new object[] { commandRequest });
+                            if (t != null)
+                            {
+                                serverResponse.CommandSuccess = true;
+                                serverResponse.CommandResponse = t.GetType().GetProperty("Result").GetValue(t);
+                            }
+                        }
 
-                        }
-                        else
-                        {
-                            // Process received response
-                            serverResponse.Command = commandRequest; serverResponse.BindCommandResponse = kbResp;
-                            serverResponse.CommandSuccess = true;
-                            serverResponse.Message = "Command was successfully processed";
-                            return serverResponse;
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        serverResponse.CommandSuccess = false;
+                        return serverResponse;
+                    }
+                }
+
+                if (serverResponse.CommandResponse != null)
+                {
+                    var successProp = serverResponse.CommandResponse.GetType().GetProperty("Success").GetValue(serverResponse.CommandResponse);
+                    if ((bool)successProp == true)
+                    {
+                        serverResponse.Message = "Command was successfully executed and processed";
                     }
                     else
                     {
-                        serverResponse.CommandSuccess = false;
-                        serverResponse.Message = "CommandData was not valid";
+                        serverResponse.Message = "Command was successfully executed but not processed";
                     }
                 }
                 else
                 {
-                    serverResponse.CommandSuccess = false;
-                    serverResponse.Message = "Unknown Command Request";
+                    serverResponse.Message = "Unknown command was requested";
                 }
             }
 
@@ -613,9 +650,19 @@ namespace Controllers.SimpleWebService
         }
 
 
+        // Handles unknown command types
+        public virtual async Task<ServerCommandResponse> CheckForAdditionalCommands(ServerCommandResponse serverResponse, object commandRequest)
+        {
+            serverResponse.CommandSuccess = false;
+            serverResponse.Message = "Unknown Command Request";
+            return serverResponse;
+        }
 
-        // Inspects and processes possible query arguments
-        private async Task<bool> ProcessRequestQuery(HttpListenerRequest HttpRequest)
+
+
+
+        // Inspects and processes possible GET query arguments and builds a Command Reqest from them
+        public async Task<bool> ProcessRequestQuery(HttpListenerRequest HttpRequest)
         {
             if (HttpRequest?.Url != null)
             {
@@ -624,58 +671,49 @@ namespace Controllers.SimpleWebService
                 {
                     // We have some query attached to the request
                     string CommandToExecute = "";
-                    string CommandData = "";
+                    string QueryCommandData = "";
                     string queryTidy = HttpRequest.Url.Query;
                     if (HttpRequest.Url.Query.StartsWith("?"))
                     {
                         queryTidy = HttpRequest.Url.Query.Replace("?", "");
                     }
+                    var parsedQuery = HttpUtility.ParseQueryString(queryTidy);
+                    CommandToExecute = parsedQuery.GetValues("Command").FirstOrDefault() ?? "";
+                    Type? checkModelsList = Assembly.GetExecutingAssembly().GetTypes().FirstOrDefault(t => t.Namespace.Contains("SocketRequest.Commands") && t.Name.ToLower().Equals($"{CommandToExecute.ToLower()}request"));
 
-                    string[] queryBreakdown = queryTidy.Split("&");
-
-                    // Check for a command attribute
-                    if (queryBreakdown.Any(a => a.Split("=").Any(a => a.ToLower().Equals("command"))))
+                    if (checkModelsList != null)
                     {
-                        // Command found, extract command and data
-                        CommandToExecute = queryBreakdown.FirstOrDefault(a => a.Split("=").Any(a => a.ToLower().Equals("command"))).Split("=")[1];
-                        if (queryBreakdown.Any(a => a.Split("=").Any(a => a.ToLower().Equals("commanddata"))))
-                        {
-                            CommandData = queryBreakdown.FirstOrDefault(a => a.Split("=").Any(a => a.ToLower().Equals("commanddata"))).Split("=")[1];
-                        }
+                        var nInstance = Activator.CreateInstance(checkModelsList);
+                        nInstance = ConvertFromCommandData(parsedQuery, nInstance);
+                        _ = await ProcessCommandRequestAsync(nInstance);
                     }
-
-                    CommandRequest builtCommand = new CommandRequest() { Command = CommandToExecute, CommandData = new List<string>() { CommandData } };
-
-
-                    _ = await ProcessCommandRequestAsync(builtCommand);
-
-
                 }
             }
-
             return true;
         }
 
 
 
-        // Returns a matching ConnectedWebSocket object
-        public partial ConnectedWebSocket? GetConnectedWebSocket(string Address = "", string Id = "")
+
+
+        // Returns all matching web sockets
+        public partial List<ConnectedWebSocket> GetConnectedWebSockets(string Address = "", string Id = "", string RegisteredName = "")
         {
-            ConnectedWebSocket? foundSocket = null;
+            List<ConnectedWebSocket> connectedWebSockets = new List<ConnectedWebSocket>();
 
             if (ConnectedWebSocketList.Count > 0)
             {
-                if (string.IsNullOrEmpty(Address) && string.IsNullOrEmpty(Id))
+                if (string.IsNullOrEmpty(Address) && string.IsNullOrEmpty(Id) && string.IsNullOrEmpty(RegisteredName))
                 {
-                    foundSocket = ConnectedWebSocketList.Last();
+                    return ConnectedWebSocketList.ToList();
                 }
                 else
                 {
-                    foundSocket = ConnectedWebSocketList.LastOrDefault(a => a.Address.StartsWith(Address) || a.Id.Equals(Id));
+                    connectedWebSockets.AddRange(ConnectedWebSocketList.Where(a => a.Address.StartsWith(Address) || a.Id.Equals(Id) || a.RegisteredName.Equals(RegisteredName)));
                 }
             }
 
-            return foundSocket;
+            return connectedWebSockets;
         }
 
 
@@ -687,8 +725,6 @@ namespace Controllers.SimpleWebService
             {
                 ConnectedWebSocketList.Add(NewSocket);
             }
-
-            //TODO: Callback action
         }
 
 
@@ -720,6 +756,21 @@ namespace Controllers.SimpleWebService
             return LandSiteLocations.ToList();
         }
 
+
+        public object ConvertFromCommandData(NameValueCollection CommandData, object Target)
+        {
+            foreach (PropertyInfo propertyInfo in Target.GetType().GetProperties())
+            {
+                foreach (var key in CommandData.AllKeys)
+                {
+                    if (key.Equals(propertyInfo.Name))
+                    {
+                        propertyInfo.SetValue(Target, CommandData[key]);
+                    }
+                }
+            }
+            return Target;
+        }
 
 
         // Sets the HTTP response content type based on the request made
@@ -766,6 +817,9 @@ namespace Controllers.SimpleWebService
 
             return false;
         }
+
+
+
 
 
     }

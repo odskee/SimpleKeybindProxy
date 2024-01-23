@@ -2,7 +2,10 @@
 {
     public class CommandRequest
     {
+        public string Id { get; set; }
+        public string? RequesterName { get; set; }
+
         public string Command { get; set; }
-        public List<string> CommandData { get; set; }
+
     }
 }

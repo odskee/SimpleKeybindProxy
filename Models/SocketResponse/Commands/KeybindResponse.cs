@@ -1,4 +1,4 @@
-﻿namespace SimpleKeybindProxy.Models.SocketResponse
+﻿namespace SimpleKeybindProxy.Models.SocketResponse.Commands
 {
     public partial class KeybindResponse
     {

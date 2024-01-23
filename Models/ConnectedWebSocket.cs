@@ -7,6 +7,7 @@ namespace SimpleKeybindProxy.Models
     {
         public string Id { get; set; }
         public string Address { get; set; }
+        public string RegisteredName { get; set; }
         public WebSocketContext SocketContext { get; set; }
         public IPEndPoint EndPoint { get; set; }
     }

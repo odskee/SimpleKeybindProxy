@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SimpleKeybindProxy.Interfaces;
-using SimpleKeybindProxy.Models.SocketRequest;
-using SimpleKeybindProxy.Models.SocketResponse;
+using SimpleKeybindProxy.Models.SocketRequest.Commands;
+using SimpleKeybindProxy.Models.SocketResponse.Commands;
 using WindowsInput;
 using WindowsInput.Native;
 
@@ -13,7 +13,7 @@ namespace SimpleKeybindProxy.Controllers
     public partial class KeyBindController : IKeyBindController
     {
         public partial Task<bool> LoadKeyBindLibraryAsync();
-        public partial Task<KeybindResponse> ProcessKeyBindRequestAsync(CommandRequest RequestedKeybindCommand);
+        public partial Task<KeybindResponse> ProcessKeyBindRequestAsync(KeybindRequest RequestedKeybindCommand);
 
     }
 
@@ -112,13 +112,14 @@ namespace SimpleKeybindProxy.Controllers
 
 
         // Processing and issues a keypress based on the bind name / key mapping
-        public partial async Task<KeybindResponse> ProcessKeyBindRequestAsync(CommandRequest RequestedKeybindCommand)
+        public partial async Task<KeybindResponse> ProcessKeyBindRequestAsync(KeybindRequest RequestedKeybindCommand)
         {
             KeybindResponse keybindResponse = new KeybindResponse() { Success = false };
 
-            if (RequestedKeybindCommand != null && !string.IsNullOrEmpty(RequestedKeybindCommand.Command) && RequestedKeybindCommand.CommandData.Any())
+            if (RequestedKeybindCommand != null && !string.IsNullOrEmpty(RequestedKeybindCommand.Command) && !string.IsNullOrEmpty(RequestedKeybindCommand?.BindName))
             {
-                string RequestedBindName = RequestedKeybindCommand?.CommandData?.FirstOrDefault() ?? "";
+
+                string RequestedBindName = RequestedKeybindCommand?.BindName ?? string.Empty;
                 KeyBindController.KeypressType KeypressRequestType;
 
                 // if there is no keybind type provided, we assume normal keypress event and check the binds file to confirm

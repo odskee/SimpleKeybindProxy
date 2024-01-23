@@ -1,18 +1,12 @@
 ﻿// Author: Tom Bedford
 // License: Free to use
 
-// Simple Web Server credit to:
-//// Filename:  HttpServer.cs        
-//// Author:    Benjamin N. Summerton <define-private-public>        
-//// License:   Unlicense (http://unlicense.org/)
-
 
 // A simple keybind proxy - starts a basic HTTP server and listens for requests.  Landing sites (including CSS and images) can be created and will be returned for
 // matching URL requests.  Server looks for "command POST requests" that contain a Reserved Word (see Docs for further info) i.e. "KeyBind_" and will then attempt
 // to match the requested keybind name to a known keybind that is then issued (to whatever application has focus at the time).
 
 
-using Controllers.SimpleWebService;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -31,7 +25,7 @@ namespace HttpListenerExample
             //Dependancy Injection
             var services = new ServiceCollection()
                 .AddSingleton<IProgramOptionsController, ProgramOptionsController>()
-                .AddSingleton<ISimpleWebServerController, HttpServer>()
+                .AddSingleton<ISimpleWebServerController, SimpleWebServerController>()
                 .AddSingleton<IKeyBindController, KeyBindController>()
                 .AddSingleton<IOutputController, OutputController>()
                 .AddLogging(configure => configure.AddSerilog());
@@ -98,7 +92,7 @@ namespace HttpListenerExample
 
 
             // Configure Web Server
-            HttpServer httpServer = (HttpServer)serviceProvider.GetService(typeof(ISimpleWebServerController));
+            SimpleWebServerController httpServer = (SimpleWebServerController)serviceProvider.GetService(typeof(ISimpleWebServerController));
             httpServer.SetProgramOptions(OptionsController.ProgramOptions);
             httpServer.BindController = bindController;
             httpServer.Listener.Prefixes.Add(OptionsController.ServerAddress);
@@ -198,7 +192,7 @@ namespace HttpListenerExample
                 Console.Write("> ");
                 string input = Console.ReadLine();
                 await ProcessRunningArgs(input.Split(" "), bindController, httpServer, OptionsController);
-                if (!string.IsNullOrEmpty(input) && input.ToLower().Equals("exit"))
+                if (!string.IsNullOrEmpty(input) && (input.ToLower().Equals("exit") || input.ToLower().Equals("close") || input.ToLower().Equals("quit") || input.ToLower().Equals("shutdown")))
                 {
                     Running = false;
                 }
@@ -210,7 +204,7 @@ namespace HttpListenerExample
         }
 
 
-        static async Task ProcessRunningArgs(string[] args, KeyBindController bindController, HttpServer httpServer, ProgramOptionsController OptionsController)
+        static async Task ProcessRunningArgs(string[] args, KeyBindController bindController, SimpleWebServerController httpServer, ProgramOptionsController OptionsController)
         {
             if (args.Length == 0)
             {
@@ -260,7 +254,7 @@ namespace HttpListenerExample
                     {
                         if (!string.IsNullOrEmpty(args[2]))
                         {
-                            connectedWebSocket = httpServer.GetConnectedWebSocket(Address: args[2]);
+                            connectedWebSocket = httpServer.GetConnectedWebSockets(Address: args[2]).First();
                         }
                         else
                         {
@@ -273,7 +267,20 @@ namespace HttpListenerExample
                     {
                         if (!string.IsNullOrEmpty(args[2]))
                         {
-                            connectedWebSocket = httpServer.GetConnectedWebSocket(Id: args[2]);
+                            connectedWebSocket = httpServer.GetConnectedWebSockets(Id: args[2]).First();
+                        }
+                        else
+                        {
+                            Console.WriteLine("Syntax error");
+                        }
+
+                        textToSend = string.Join(" ", args.TakeLast(args.Length - 3));
+                    }
+                    else if (args[1].StartsWith("-n"))
+                    {
+                        if (!string.IsNullOrEmpty(args[2]))
+                        {
+                            connectedWebSocket = httpServer.GetConnectedWebSockets(RegisteredName: args[2]).First();
                         }
                         else
                         {
@@ -304,26 +311,6 @@ namespace HttpListenerExample
                 Console.WriteLine("");
                 break;
 
-                case "ignore":
-                if (!string.IsNullOrEmpty(args[1]))
-                {
-                    if (args[1].Equals("1") || args[1].ToLower().Equals("y"))
-                    {
-                        OptionsController.ProgramOptions.IgnoreMissingLanding = true;
-                        Console.WriteLine("Ignore Missing Landing Sites enabled");
-                    }
-                    else if (args[1].Equals("0") || args[1].ToLower().Equals("n"))
-                    {
-                        OptionsController.ProgramOptions.IgnoreMissingLanding = false;
-                        Console.WriteLine("Ignore Missing Landing Sites disabled");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unknown Command");
-                    }
-                }
-                Console.WriteLine("");
-                break;
 
                 case "noissue":
                 if (args.Length > 1 && !string.IsNullOrEmpty(args[1]))
@@ -343,6 +330,35 @@ namespace HttpListenerExample
                         Console.WriteLine("Unknown Command");
                     }
                 }
+                Console.WriteLine("");
+                break;
+
+                case "showsockets":
+                List<ConnectedWebSocket> socketList = httpServer.GetConnectedWebSockets();
+
+                if (socketList?.Count > 0)
+                {
+                    Console.WriteLine("");
+                    Console.WriteLine("Total Open Sockets: {0}", socketList.Count);
+
+
+                    foreach (ConnectedWebSocket socket in socketList)
+                    {
+                        Console.WriteLine("");
+
+                        Console.WriteLine("-----------------------------------");
+                        Console.WriteLine("Socket: {0}", socket.Address);
+                        Console.WriteLine("-----------------------------------");
+                        Console.WriteLine("Id: {0}", socket.Id);
+                        Console.WriteLine("Registered Name: {0}", socket.RegisteredName);
+                        Console.WriteLine("");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("There are no open web sockets");
+                }
+
                 Console.WriteLine("");
                 break;
 
