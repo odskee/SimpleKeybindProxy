@@ -1,54 +1,50 @@
-# SimpleKeybindProxy
-A simple C# / .NET Console Keybind proxy
-
-# Changes 11/01/2024
+# Changes 17/01/2024
 Substantial changes have been made to the way SKP operates.
 
-## Next Planned
-+ Implement sockets for 2-way control
-+ replace Input Simulator with self wrapped win32 library
-+ Better generic sample Landing page
-+ Code restructure for game / application specific use
+<br />
 
+# Simple Keybind Proxy
+A simple and light weight Key Press & command Proxy server - allowing you to locally make keyboard inputs from any remote device on your network that has a web browser.  It starts a leight-weight web server accessible over local network, providing the requested landing Site(s).  A landing site is a website that represents your inputs - it can look however you like, with any style of buttons, switches and sliders etc.  Paired with this is a keybind dictionary, which translates keybind names into the specific keyboard inputs for that action.  Multiple landing site and keybind dictionaries can be created and used all at the same time, allowing multiple virtualised button boxes to be created.  Landing sites may implement persistent connections and receive updates from game events and requested commands.
 
 <br />
 
-# Description / What does it do?
-A simple and very light weight Key Press Proxy server - allowing you to run keyboard inputs from any remote device on your network that has a web browser.  It starts a leight-weight web server accessible over local network, providing the requested landing Site(s).  A landing site is a website that represents your inputs - it can look however you like, with any style of buttons, switches and sliders etc.  Paired with this is a keybind dictionary, which translates keybind names into the specific keyboard inputs for that action.  Multiple landing site and keybind dictionaries can be created and used all at the same time, allowing multiple virtualised button boxes to be created.
-
-<br />
-
-# How Does it Work?
-Running SimpleKeyBindProxy.exe starts a local web server with a specified landing site directory as it's base.  When a request is received, the URL is converted in a corresponding directory structure i.e. *localhost:8001/Landing1/Panel_1/* would translate to *.\Landing\Landing1\Panel_1*.  SSK now uses the GET method to detect and process keybind requests, with multiple request types now available.  If the URL contains the parameters "Command" and "CommandData", the values of these are inspected and processed.  The "Command" parameter dictates what action is being requested, while the "CommandData" parameter supplies any data required to complete the requested action; for keybinds, the command would specify the type of keypress while commandData would specify the name of the keybind requested.
-
-Keybind command requests will specify a name of the keybind they are requesting, not the key combination itself - allowing landing sites to be kept generic.  A seperate keybind dictionary is used, which is a comma seperated list of a Keybind name to a matching keyboard input / input combination, SKP matches the keybind name i.e. "ButtonCombination_1" to the actual keyboard input that's needed i.e. "LSHIFT+VK_A" (a list of the keyboard input names is provided in Apendix 1).
-
-## Landing Sites and Keybind dictionaries
-The idea is when creating a landing site, a template keybind dictionary should be provided.  SKP will import all dictionaries found within the Binds directory, so these can be seperated into multiple files that correspond to a specific landing site.  Landing sites can be created by yourself or others, and be as simple or complex as you would like. 
-
-<br />
-
+# Getting Started
 # Setup
 Downloaded the latest version:
 > https://github.com/odskee/SimpleKeybindProxy/releases
 
-Extract the zip file to somewhere suitable i.e. *C:\SimpleKeybindProxy\*.  This folder contains a "Binds" and "Landing" which are used to hold your keybind dictionaries and landing sites.
+Extract the zip file to somewhere suitable i.e. *C:\SimpleKeybindProxy\*.  This folder contains a "Binds" and "Landing" folders which are used to hold your keybind dictionaries and landing sites.
 
 There are two sample Landing Sites to give a very, very basic demonstration within the Landing Folder.  A matching bind dictionary is included at Binds/Binds.txt.  The samples are sufficient to observe the program but you will likely want to change these yourself - instead of modifying the included samples, duplicate then rename one of the samples to avoid overwritting your changes on updates.
-
-To run the program, run SimpleKeybindProxy.exe AS AN ADMINISTRATOR - the server likely will not start without admin rights.  The console output will show you both what network addresses it can be accessed on and the landing site URL's it has detected.  By default, you can access your landing sites at "http://localhost:8001/" (See Usage below on how to change this).
 
 <br />
 
 # Usage
-## Starting SKP
-### Run SimpleKeybindProxy.exe
-Providing you are using the default "Landing" and "Binds" folders, Right-Click SimpleKeybindProxy.exe and choose "Run as Administrator".  SKP will then start and once running, begin listnening for requests.  The output at this time will show you both the network addresses it's accessible on and the landing site URL's for each landing site you have.
+## Configure SKP
+The main folder containing the SimpleKeybindProxy.exe will also have an AppSettings.json file.  This file contains a number of settings that can change the way SKP operates - for the majority of people however the defaults will be fine.  If you would like to use a custom log, landing or bind site directory, you can specify those here.
 
 <br />
 
-### Run From Console
-Power / Advances users can run directly from the command line with additional arguments.  Note, some (and soon all) of these can be configured within the running console.  Make sure you run from a Powershell / Terminal window with admin rights.
+## Landing Sites and Keybind dictionaries
+The idea is when creating a landing site, a template keybind dictionary should be provided.  SKP will import all dictionaries found within the Binds directory, so these can be seperated into multiple files that correspond to a specific landing site.  Landing sites can be created by yourself or others, and be as simple or complex as you would like.
+
+### Setting Your Binds
+The bind dictionary is a simple txt file that specifies the name of a keybind, a comma (,) then the 'system' name for the key press - an example can be found in Apendix 2.
+
+You can combine as many modifiers as you like by using the plus (+) symbol and can combine as many key presses with the hash (#) symbol.  For example: LMENU+LSHIFT+VK_A#VK_B which would: press and hold left alt and left shift, press and release 'A' then 'B' and finally release left shift and left alt - the last keypress after a + is not treated as modifier.
+
+<br />
+
+## Run SimpleKeybindProxy.exe
+Right-Click SimpleKeybindProxy.exe and choose "Run as Administrator" - running without admin rights will likely cause SKP to fail to start.  Once SKPT is running, it will begin listnening for requests.  The output at this time will show you both the network addresses it's accessible on and the landing site URL's for each landing site you have.  By default, you can access your landing sites at "http://localhost:8001/"; navigate to a landing site to begin interacting with SKP.
+
+<br />
+
+<br />
+
+# Power Users
+## Run From Console
+Power / Advances users can run directly from the command line with additional arguments.  Make sure you run from a Powershell / Terminal window with admin rights.
 
 The following arguments are available: 
 
@@ -70,26 +66,25 @@ Once SKP is running, you can view your landing sites at _"http://localhost:8001/
 The URL request structure needs to match your Landing Site directory structure.  For example, if you add "SitesByBob/Panel_1/" into the Landing Site folder, you can view this landing site at http://localhost:8001/SitesByBob/Pane_1/.  By default, requesting the URL with no landing site will display a default page with minimal content - this is currently being turned into a web management interface.
 
 You can also issue commands into the running console window; currently the following commands are available:
-```
-v <number> - Change the verbosity level.  Example "v 2"
-reload - Reloads all keybind dictionaries.  Example "reload"
-showbinds - Shows all bind names to keypress pairs in your dictionaries.  Example: "showbinds"
-```
 
-Verbosity level sets how noisy the output is - by default this is 1.  With this value, you will see the keybind name and matching keypress shown in the console window, along with the source of the request.  With Verbosity level 2, all requests are shown in addition to a trace of the keybind execution.
+`v <1 | 2>` - Change the verbosity level.  Default 1.  Example "v 2"`
 
-<br />
+`reload` - Reloads all keybind dictionaries.  Example "reload"
 
-## Setting Your Binds
-The bind dictionary is a simple txt file that specifies the name of a keybind, a comma (,) then the 'system' name for the key press - an example can be found in Apendix 2.
+`showbinds` - Shows all bind names to keypress pairs in your dictionaries.  Example: "showbinds"
 
-You can combine as many modifiers as you like by using the plus (+) symbol and can combine as many key presses with the hash (#) symbol.  For example: LMENU+LSHIFT+VK_A#VK_B which would: press and hold left alt and left shift, press and release 'A' then 'B' and finally release left shift and left alt - the last keypress after a + is not treated as modifier.
+`socketsend <-a [address] | -i [Id] Text_To_Send>` - Sends data to the specified web socket.  Example: socketsend -a 127.0.0.1:1234 Text sent to landing site
+
+`noissue <0 | 1>` - Don't issue the actual keypress / combination - useful for testing.  Default 0.  Example: noissue 1
+
+*Verbosity level dictates how noisy the console output is and what gets stored in the log file.  Recomend only setting '2' when troubleshooting issues.*
 
 <br />
 
 ## Making keybind requests
-You can either make a keybind request manually by 'building' the URL yourself, use one of the Landing site examples or create your own.  See the section below on creating your own landing site.
+You can either make a keybind request manually by 'building' the URL yourself, or by starting a web socket connection and submitting a valid json string.
 
+### Using HTTP GET
 A request is made by including two parameters in the URL; Command and CommandData i.e. */?Command=KeyPress&CommandData=MyKeybindName*.  You can request one of three keypress types as the Command:
 + KeyPress - this is a keydown and keyup event i.e. a KeyPress for the CTRL button would press and then release control.  For key conbinations, the modifiers are pressed and held, while the keys are pressed and released.
 + KeyDown - Request press only; the requested button / combination will be pressed and not released.  For combinations, this occurs in the order they are specified.
@@ -97,13 +92,23 @@ A request is made by including two parameters in the URL; Command and CommandDat
 
 The CommandData parameter should comtain the name of a matching keybind in one of the keybind dictionaries.
 
-As shown above, you can make a manual key press by requesting the KeyBind URL directly.  To do this, navigate to http://server_address:server_port/?Command=KeyPress&CommandData=test - in this example, this will show an output in the SKP console showing a button press was requested, you can run this from a network device to verify SKP is working properly.
+The URL structure for this command would look like http://server_address:server_port/?Command=KeyPress&CommandData=test - in this example, this will show an output in the SKP console showing a button press was requested, you can run this from a network device to verify SKP is working properly.
 
-### Manual Example
+**Example**
 Locate and open you binds.txt file (or create a new blank .txt file in the same folder).  Add the following entry *"ScreenSample, SCREENSHOT"* then save and close the file.  Start SKP and browse to the following address *"http://localhost:8001/?Command=KeyPress&CommandData=ScreenSample"*.  This will show both the request in the SKP console window while also pressing the print screen keyboard key - you can verify this by pasting into MSPaint or similar.  Furthermore, verify this behaviour by navigating to the URL from another device on your network, replacing localhost with the local IP of your computer.
 
+<br />
+
+### Using Web Sockets
+Using any tool of choice (Weasel for Firefox for example), initiate a WS connection with the device running SKP.  Upon successful connection, you will receive a `SocketConnectedResponse` object that contains an Id and 'hello' message.  The Id provided can be used with the socketsend command i.e. `socketsend -i 4b6c28d3-891c-47dd-b60c-8c848e506298 test my web socket`.  To submit a valid command, you must provide a josn string representing the `CommandRequest` object, which comprises of the command to execute and a string array of command data.  The following commands are currentlya available, each of which is self-explanatory.
+* `Keybind_Keypress`
+* `Keybind_hold`
+* `Keybind_release`
+
+The name of the desired bind as entered into the binds dictionary should be provided in the CommandData array.
 
 <br />
+
 <br />
 
 # Making Custom Landing Sites
@@ -132,6 +137,10 @@ When you want to include a resource such as CSS stylesheet or images, you must u
 ## Making Keybind Requests
 You can issue a keybind request by making a GET request that contains the parameters "Command" and CommandData".  How you do this is up to you - one technique using JS is shown in the provided "Landing1" sample; by using the OnClick event and some JQuery, a GET request for a certain keybind name is sent when clicking on div elements.
 
+### Using Web Sockets
+A more useful way of using SKP is by making use of a web socket to establish two-way communication between SKP and your landing site.  The same information is submitted via web socket, this time as a josn string that represents a CommandRequest - the basic string structure will look like *{"Command" : "MyCommand", "CommandData" : ["NameOFKeybind"]}*.  Upon making the request, you will receive a response indicating the success or failure of your command request.
+
+
 ### Naming your Keybinds
 The name of the keybind is chosen by you and can be anything you want - each one you use needs to be added to a dictionary for you / the user the match a keyboard input to.  When naming your binds, it is advisable to be as unique as possible while making them intuative.  For example, to create an input the issues a request to raise landing gear in MS Flight Sim, choosing a name formatted like "msfs_myPlane1_gearUp" minimises the chance of conflicting with the same or similar event in another game or application.
 
@@ -149,24 +158,53 @@ JS / HTML:
     	<title>Simple Keybind Proxy</title>
     	<link rel="stylesheet" href=".\style.css" type="text/css">
     	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    	<script>
-    		function IssueBind(bindName) {
-    			$.get("./", { Command: "KeyBind_Press", CommandData: bindName });
-    		}
-    	</script>
     </head>
     <body>
         <main>
             <div OnCLick="IssueBind('MyCustomKeybind')" style="PressButtonSmall">Press this Button</div>
         </main>
+        <script type="text/javascript">
+        	const socket = new WebSocket("ws://127.0.0.1:8001");
+        	const sendMsg = {
+        		Command: "Keybind_Press",
+        		CommandData: ["FlapsInc"]
+        	};
+        
+        	socket.addEventListener("message", (event) => {
+        		console.log("Message from server ", event.data);
+        	});
+        	socket.addEventListener("error", (event) => {
+        		console.log("WebSocket error: ", event);
+        	});
+        	socket.addEventListener("close", (event) => {
+        		console.log("The connection has been closed successfully.");
+        	})
+        	function IssueBind(bindName) {
+        		$.get("./", { Command: "KeyBind_Press", CommandData: bindName });
+        	}
+        
+        	function TestSocket() {
+        		console.log("Sending Data");
+        		console.log(socket.readyState);
+        
+        		socket.send(JSON.stringify(sendMsg));
+        	}
+        </script>
     </body>
 </html>
 ```
 
 <br />
 
-## Special Notes
+# Special Notes
+## Favicon.ico Requests
 Currently, any favicon.ico requests are ignored by the server and will not be shown even if provided.
+
+## Security - Use at your own risk!
+SKP started originally from a PoC idea and has grown to meet the requirements in the most simple way possible.  As such, it is intended to be operated in an environment that you control with landing sites that you trust / have made yourself.  DO NOT expose SKP to public networks / port forward for off-site access.  The author of SKP accepts zero responsibility for any harm, damage or 'bad times' that result in using SKP in any way.
+
+## Max Web Socket Requests
+By default, SKP has a limit of 15 active web socket connections.  This means a total of 15 landing sites with active socket connections can be use simultaneously, although there is no limit on the number of non-socket HTTP requests that can be made.  To change this value, locate the AppSettings.json file and set accordingly.
 
 <br />
 <br />
@@ -430,6 +468,8 @@ i.e NUMPAD4
         OEM_CLEAR
 ```
 
+<br />
+
 # Appendix 2 - Sample Keybind dictionary
 ```
 FlapsInc,LCTRL+LMENU+LSHIFT+F
@@ -438,4 +478,44 @@ GearDn,G
 GearUp,LSHIFT+G
 Test,LCONTROL+LMENU+VK_A
 OpenMap,VK_M
+```
+
+<br />
+
+# Appending 3 - Request / Response Objects
+## CommandRequest
+```
+{
+  "command": string,
+  "commandData": string[]
+}
+```
+
+## SocketConnectedResponse
+```
+{
+  "id": string,
+  "message": string
+}
+```
+
+## ServerCommandResponse
+```
+{
+  "command": CommandRequest,
+  "commandSuccess": bool,
+  "message": string,
+  "bindCommandResponse": KeyBindResponse
+}
+```
+
+## KeybindResponse
+```
+{
+  "keybindName": string,
+  "keypressCombination": string[],
+  "modifierCombination": string[],
+  "success": bool,
+  "responseMessage": string
+}
 ```
