@@ -1,6 +1,0 @@
-FlapsInc,CAPITAL
-FlapsDec,LALT_F
-GearDn,G
-GearUp,LSHIFT+G
-Test,LCONTROL+LMENU+VK_A
-OpenMap,VK_M

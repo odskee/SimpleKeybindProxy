@@ -238,11 +238,23 @@ namespace HttpListenerExample
                 break;
 
                 case "showbinds":
-                foreach (var bind in bindController.BindLibrary)
+                List<KeyBindEntry> bindsToShow = new List<KeyBindEntry>();
+                string bindName = "";
+                if (!string.IsNullOrEmpty(args[1]))
+                    bindName = args[1];
+
+                foreach (var bind in bindController.KeybindLibrary.Where(a => string.IsNullOrEmpty(bindName) || a.BindName.Equals(bindName)))
                 {
-                    Console.WriteLine("{0} -> {1}", bind.Key, bind.Value);
+                    bindsToShow.Add(bind);
+                    Console.WriteLine("");
+                    Console.WriteLine("Name......: {0}", bind.BindName);
+                    Console.WriteLine("Modifiers.: {0}", bind.Modifiers.Count > 0 ? bind.Modifiers.ToString() : "None");
+                    Console.WriteLine("Keys......: {0}", bind.Keypress.Count > 0 ? bind.Keypress.ToString() : "None");
+                    Console.WriteLine("Press Type: {0}", bind.BindName);
+                    Console.WriteLine("--------------------------------");
                 }
                 Console.WriteLine("");
+
                 break;
 
                 case "socketsend":
