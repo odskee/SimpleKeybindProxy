@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SimpleKeybindProxy")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+86d8e0630ae5e025037f5055a66a7b962924ba60")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fd5d221cb637ac441fe59cbabc5b16953a643b90")]
 [assembly: System.Reflection.AssemblyProductAttribute("SimpleKeybindProxy")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SimpleKeybindProxy")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

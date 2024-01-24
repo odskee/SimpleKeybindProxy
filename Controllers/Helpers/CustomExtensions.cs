@@ -19,7 +19,7 @@ namespace SimpleKeybindProxy.Controllers.Helpers
             object ret = new object();
             var t = Request.EnumerateObject();
 
-            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(a => a.Namespace.Equals("SimpleKeybindProxy.Models.SocketRequest") && a.Name.EndsWith("Request")))
+            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(a => a.Namespace.Equals("SimpleKeybindProxy.Models.SocketRequest.Commands") && a.Name.EndsWith("Request")))
             {
                 if (t.Any(a => a.Name.ToLower().Equals("command") && a.Value.GetString().ToLower().Equals(type.Name.ToLower().Replace("request", ""))))
                 {

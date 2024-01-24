@@ -340,8 +340,8 @@ namespace SimpleKeybindProxy.Controllers
                                     // Need to empty receive buffer to hold next possible request
                                     receiveBuffer = new byte[receiveChunkSize];
 
-
-                                    reqData = JsonSerializer.Deserialize<object>(dataReceived)?.FromJson();
+                                    var t = JsonSerializer.Deserialize<object>(dataReceived);
+                                    reqData = t.FromJson();
 
                                     // Provided ID and requester match
                                     if (reqData != null)
