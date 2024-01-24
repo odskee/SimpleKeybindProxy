@@ -328,8 +328,8 @@ JS / HTML:
         <script type="text/javascript">
         	const socket = new WebSocket("ws://127.0.0.1:8001");
         	const sendMsg = {
-        		Command: "Keybind_Press",
-        		CommandData: ["FlapsInc"]
+        		Command: "Keybind",
+        		BindName: "TestBind"
         	};
         
         	socket.addEventListener("message", (event) => {
