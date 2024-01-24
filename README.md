@@ -1,10 +1,16 @@
 # Changes 23/01/2024
-Substantial changes have been made to the way SKP operates.
+Substantial changes have been made to the way SKP operates. Current Roadmap:
+* Keybind type file override - press type can be defined in the bind file (and supersedes the requested type) 
+* Finish and Implement message chunks
+* Add "Monitor Game" command(s)
+* Elite Dangrous Controller - using journal and keypresses
+* DCS Controller - using DCS-BIOS
+* 'Keybind Processor' - GUI to set keypress for each declared bind name
 
 <br />
 
 # Simple Keybind Proxy
-A simple and light weight Key Press & command Proxy server - allowing you to locally make keyboard inputs from any remote device on your network that has a web browser.  It starts a leight-weight web server accessible over local network, providing the requested landing Site(s).  A landing site is a website that represents your inputs - it can look however you like, with any style of buttons, switches and sliders etc.  Paired with this is a keybind dictionary, which translates keybind names into the specific keyboard inputs for that action.  Multiple landing site and keybind dictionaries can be created and used all at the same time, allowing multiple virtualised button boxes to be created.  Landing sites may implement persistent connections and receive updates from game events and requested commands.
+A simple and light weight Key Press & command Proxy server - allowing you to locally make keyboard (and soon direct-to-game) inputs from any remote device on your network that has a web browser.  It starts a leight-weight web server accessible over local network, providing requested landing Site(s).  A landing site is a website that represents your inputs - it can look however you like, with any style of buttons, switches and sliders etc (a virtual button box).  Paired with this is a keybind dictionary, which translates keybind names into the specific keyboard inputs for that action.  Multiple landing site and keybind dictionaries can be created and used all at the same time, allowing multiple virtualised button boxes to be created.  Landing sites may implement persistent connections and receive updates from game events and requested commands.
 
 <br />
 
@@ -122,7 +128,7 @@ Locate and open you binds.txt file (or create a new blank .txt file in the same 
 ### Using Web Sockets
 _Test using any tool of choice (Weasel for Firefox for example)._
 
-Using Web Sockets is a far better method as it allows request feedback and multi-landing site communication.  SKP works by either sending or receiving JSON text over web socket.  Each request you make needs to be structured, while each response contains feedback on your request - a full list of JSON descriptors are available in Apendix 3.
+Using Web Sockets is a far better method as it allows request feedback and multi-landing site communication.  SKP works by sending and receiving JSON text over web socket.  Each request you make needs to be structured according to the specific command model. Each command will produce a response, containing the requested command and the outcome of the request (success or fail) - note that there is a `CommandSuccess` flag to indicate a successful receipt and translation of the command in addition to a `Success` flag indicating the result of the command request itself.  A full list of JSON descriptors are available in Apendix 3.
 
 Important note: The max size of a message is 512; meaning any messages above this size will be split into multiple parts.
 
@@ -134,10 +140,25 @@ Once you initiate a WS connection, you will receive a `SocketConnectedResponse` 
 }
 ```
 
+Each further request you make will also generate a `ServerCommandResponse`; this holds a `CommandResponse` object which provided additional information about the specfic command:
+```
+{
+  "id": String,
+  "command": Object,
+  "commandSuccess": Bool,
+  "message": String,
+  "commandResponse": Object
+}
+```
+<br />
+
 Each subsequent request you make must contain the ID you are provided.  To submit a command, you need to provide a josn string representing the desired Command object; this includes you command and any relevant command data.  The following commands are currentlya available:
 
 **Command: Keybind**
+
 Requests the keypresses of the matching provided Keybind Name.  BindName is the name of the keypress(s) as listed in one of the bind dictionaries.  PressType is not yet implemented.
+
+Request:
 ```
 {
    "Id": String,
@@ -147,9 +168,23 @@ Requests the keypresses of the matching provided Keybind Name.  BindName is the 
 }	
 ```
 
+Response:
+```
+{
+  "keybindName": String,
+  "keypressCombination": String[],
+  "modifierCombination": String[],
+  "success": Bool,
+  "responseMessage": String
+}
+```
+
+<br />
+
 <br />
 
 **Command: RegisterWebSocket**
+
 Allows you to register a known name for you Landing site.  Registered connections / landing sites can communicate with each other.
 ```
 {
@@ -159,9 +194,23 @@ Allows you to register a known name for you Landing site.  Registered connection
 }	
 ```
 
+Response:
+```
+{
+  "oldName": String,
+  "newName": String,
+  "success": Bool,
+  "message": String
+}
+
+```
+
+<br />
+
 <br />
 
 **Command: SendToSocket**
+
 Sends the provided data to the requested registered connection / landing site. 
 ```
 {
@@ -171,6 +220,71 @@ Sends the provided data to the requested registered connection / landing site.
    "Message": Object
 }	
 ```
+Response:
+```
+{
+  "toId": String,
+  "destinationName": String,
+  "success": Bool,
+  "message": String
+}
+
+
+```
+
+<br />
+
+#### Example - make a keybind request using web sockets from start to finish
+*Assumes a bind name of 'TestBind'*
+
+Open a new web socket connection and store the recived Id property (**4a01ca13-2d1f-46e2-b6ff-9e5f79afa943**) within your response / 'hello message':
+```
+{
+   "Id": "4a01ca13-2d1f-46e2-b6ff-9e5f79afa943",
+   "Message": "Server Says Hello"
+}	
+```
+
+<br />
+
+Next, submit a keybind command request to the server:
+```
+{
+   "Id": "4a01ca13-2d1f-46e2-b6ff-9e5f79afa943",
+   "Command": "Keybind",
+   "BindName": "TestBind",
+   "PressType": String
+}
+```
+
+<br />
+
+Observer from your response whether your request was successful or not:
+```
+{
+   "Id": "4a01ca13-2d1f-46e2-b6ff-9e5f79afa943",
+   "Command": {
+      "BindName": "TestBind",
+      "PressType": null,
+      "Id": "4a01ca13-2d1f-46e2-b6ff-9e5f79afa943",
+      "RequesterName": "",
+      "Command": "keybind"
+   },
+   "CommandSuccess": true,
+   "Message": "Command was successfully executed and processed",
+   "CommandResponse": {
+      "KeybindName": "TestBind",
+      "KeypressCombination": [
+         "CAPITAL"
+      ],
+      "ModifierCombination": [],
+      "Success": true,
+      "ResponseMessage": null
+   }
+}	
+```
+
+<br />
 
 <br />
 
