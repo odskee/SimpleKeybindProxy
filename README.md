@@ -35,9 +35,11 @@ The main folder containing the SimpleKeybindProxy.exe will also have an AppSetti
 The idea is when using or creating a landing site, a template keybind dictionary should be provided.  SKP will import all dictionaries found within the Binds directory, so these can be seperated into multiple files that correspond to a specific landing site.  Landing sites can be created by yourself or others, and be as simple or complex as you would like.
 
 ### Setting Your Binds
-The bind dictionary is a simple txt file that specifies the name of a keybind, a comma (,) then the 'system' name for the key press - an example can be found in Apendix 2.
+SKP uses bind dictionaries - these are txt files with a ".binds" extension that contain a CSV list of bind name to keypress(s) and types.  Each entry should be structured the same way or SKP will not load that entry.  The structure for each entry is as follows:
 
-You can combine as many modifiers as you like by using the plus (+) symbol and can combine as many key presses with the hash (#) symbol.  For example: LMENU+LSHIFT+VK_A#VK_B which would: press and hold left alt and left shift, press and release 'A' then 'B' and finally release left shift and left alt - the last keypress after a + is not treated as modifier.
+[Keybind Name] , [Keybind Modifiers] , [Keybind Keypresses] , [Press Type]
+
+You can ommit the Press Type option - when not present this defaults to a press and release action.  The keypress type can also be requested via a landing page - when both a landing page and bind dictionary specify a keypress type, the bind dictionary pree type is used.
 
 <br />
 
